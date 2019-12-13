@@ -1,2 +1,4 @@
-# paper_coding
-paper_coding
+# paper coding [TF2.0]
+##NMT attention
+1. NMT_with_Attenion    [Effective Approaches to Attention-based Neural Machine Translation](https://arxiv.org/abs/1508.04025v5)    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/NMT_attention)**
+
