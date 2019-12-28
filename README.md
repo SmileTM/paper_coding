@@ -7,3 +7,8 @@
     [NEURAL MACHINE TRANSLATION BY JOINTLY LEARNING TO ALIGN AND TRANSLATE](https://arxiv.org/pdf/1409.0473.pdf)
 
     **[[code]](https://github.com/SmileTM/paper_coding/tree/master/NMT_attention)**
+    
+2. Transformer_block
+    [Attention Is All You Need](http://arxiv.org/abs/1706.03762)
+    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Transformer_block)**
+    
