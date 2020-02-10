@@ -20,14 +20,13 @@ class Attention(tf.keras.layers.Layer):
         '''
         input = tf.reshape(input, (batch_size, -1, n_head, d_head))
         return tf.einsum('blnd->bnld', input)
-
     def attention_procedure(self, q, k, v, mask):
         qk = tf.einsum('bnld,bnLd->bnlL', q, k)
         dk = tf.cast(k.shape[-1], qk.dtype)
         attention_weights = qk / tf.sqrt(dk)
 
         if mask is not None:
-            attention_weights += mask * -1e9
+            attention_weights += (mask * -1e9)
         attention_weights = tf.nn.softmax(attention_weights, axis=-1)
 
         out = tf.einsum('bnlL,bnLd->bnld', attention_weights, v)
@@ -38,7 +37,7 @@ class Attention(tf.keras.layers.Layer):
 
     def call(self, inputs):
         q, k, v, mask = inputs
-        batch_size = q.shape[0]
+        batch_size = tf.shape(q)[0]
         q = self.qw(q)
         k = self.qw(k)
         v = self.qw(v)
@@ -49,11 +48,13 @@ class Attention(tf.keras.layers.Layer):
 
         out, attention_weights = self.attention_procedure(q, k, v, mask)
 
-        out = tf.einsum('bnld->blnd', out)
-
-        out = tf.einsum('blnd,ndm->blm', out, self.kernel)
+        # out = tf.einsum('bnld->blnd', out)
+        #
+        # # out = tf.einsum('blnd,ndm->blm', out, self.kernel)
 
         return out, attention_weights
+
+
 
 
 class TransformerBlock(tf.keras.layers.Layer):
@@ -83,3 +84,15 @@ class TransformerBlock(tf.keras.layers.Layer):
         out2 = self.layer_norm2(out2 + out1)
 
         return out2
+
+
+
+
+if __name__ == '__main__':
+
+    att = Attention(d_model=768, n_head=12)
+    input = tf.keras.layers.Input(shape=(512,768))
+    out = att([input, input, input,None])
+    model = tf.keras.models.Model(inputs=input, outputs=out)
+    model.summary()
+    print(model.layers)
