@@ -9,11 +9,9 @@
 import tensorflow as tf
 import utils
 
-# Todo: bert 与 albert 分离
 class BertConfig(object):
     def __init__(self,
                  vocab_size=20000,
-                 model_name='bert',
                  n_head=12,
                  d_hidden=768,
                  num_hidden_layers=12,
@@ -25,7 +23,6 @@ class BertConfig(object):
                  attention_dropout_rate=0.0,
                  hidden_dropout_rate=0.0):
         self.vocab_size = vocab_size
-        self.model_name = model_name
         self.n_head = n_head
         self.d_hidden = d_hidden
         self.num_hidden_layers = num_hidden_layers
@@ -47,7 +44,6 @@ class BertModel(tf.keras.layers.Layer):
         self.encoder = Transformer(num_hidden_layers=self.config.num_hidden_layers,
                                    d_hidden=self.config.d_hidden,
                                    n_head=self.config.n_head,
-                                   model_name=self.config.model_name,
                                    d_intermediate=self.config.d_intermediate,
                                    hidden_act=self.config.hidden_act,
                                    attention_dropout_rate=self.config.attention_dropout_rate,
@@ -269,7 +265,6 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 class Transformer(tf.keras.layers.Layer):
     def __init__(self,
-                 model_name='bert',
                  n_head=12,
                  d_hidden=768,
                  num_hidden_layers=12,
@@ -280,7 +275,6 @@ class Transformer(tf.keras.layers.Layer):
                  hidden_dropout_rate=0.0,
                  **kwargs):
         super(Transformer, self).__init__(**kwargs)
-        self.model_name = model_name
         self.n_head = n_head
         self.d_hidden = d_hidden
         self.num_hidden_layers = num_hidden_layers
@@ -292,25 +286,17 @@ class Transformer(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         self.layers = []
-        if self.model_name == 'bert':
-            for i in range(self.num_hidden_layers):
-                self.layers.append(TransformerBlock(n_head=self.n_head,
-                                                    d_hidden=self.d_hidden,
-                                                    d_intermediate=self.d_intermerdiate,
-                                                    hidden_act=self.hidden_act,
-                                                    initializer_range=self.initializer_range,
-                                                    hidden_dropout_rate=self.hidden_dropout_rate,
-                                                    attention_dropout_rate=self.attention_dropout_rate,
-                                                    name=("layer_%d" % i)))
-        elif self.model_name == 'albert':
-            self.layers = [TransformerBlock(n_head=self.n_head,
-                                            d_hidden=self.d_hidden,
-                                            d_intermediate=self.d_intermerdiate,
-                                            hidden_act=self.hidden_act,
-                                            initializer_range=self.initializer_range,
-                                            hidden_dropout_rate=self.hidden_dropout_rate,
-                                            attention_dropout_rate=self.attention_dropout_rate,
-                                            name="albert_layer")] * self.num_hidden_layers
+
+        for i in range(self.num_hidden_layers):
+            self.layers.append(TransformerBlock(n_head=self.n_head,
+                                                d_hidden=self.d_hidden,
+                                                d_intermediate=self.d_intermerdiate,
+                                                hidden_act=self.hidden_act,
+                                                initializer_range=self.initializer_range,
+                                                hidden_dropout_rate=self.hidden_dropout_rate,
+                                                attention_dropout_rate=self.attention_dropout_rate,
+                                                name=("layer_%d" % i)))
+
 
         super(Transformer, self).build(input_shape)
 
