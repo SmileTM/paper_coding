@@ -8,6 +8,8 @@
 #
 import tensorflow as tf
 import utils
+import copy
+
 
 class BertConfig(object):
     def __init__(self,
@@ -33,6 +35,11 @@ class BertConfig(object):
         self.initializer_range = initializer_range
         self.attention_dropout_rate = attention_dropout_rate
         self.hidden_dropout_rate = hidden_dropout_rate
+
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
 
 
 class BertModel(tf.keras.layers.Layer):
@@ -75,9 +82,17 @@ class BertModel(tf.keras.layers.Layer):
 
         sequence_output = self.encoder((input_tensor, attention_mask))
         first_token_tensor = tf.squeeze(sequence_output[:, 0:1, :], axis=1)  # [batch_size ,d_hidden]
-        pooleed_output = self.pooler_transform(first_token_tensor)
+        pooled_output = self.pooler_transform(first_token_tensor)
 
-        return (pooleed_output, sequence_output)
+        return (pooled_output, sequence_output)
+
+    def get_embedding_table(self):
+        return self.embedding_processor.embedding_word_ids.embeddings
+
+    def get_config(self):
+        config = super(BertModel, self).get_config()
+        config.update({"config": self.config.to_dict()})
+        return config
 
 
 class EmbeddingProcessor(tf.keras.layers.Layer):
@@ -296,7 +311,6 @@ class Transformer(tf.keras.layers.Layer):
                                                 hidden_dropout_rate=self.hidden_dropout_rate,
                                                 attention_dropout_rate=self.attention_dropout_rate,
                                                 name=("layer_%d" % i)))
-
 
         super(Transformer, self).build(input_shape)
 
