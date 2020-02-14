@@ -360,5 +360,14 @@ if __name__ == '__main__':
     output = bertModel((input_word_ids, input_mask, input_type_ids))
 
     model = tf.keras.Model(inputs=(input_type_ids, input_mask, input_word_ids), outputs=output)
+    #
+    # print(model.trainable_weights)
+    # model.summary()
+    model.load_weights('./out/allmodel-ckpt')
+    # print(model.trainable_weights)
+    model.trainable_weights[-1].numpy= tf.random.uniform(shape=(768,),dtype=tf.float32)
+    model.layers[-1].trainable_weights[-1].assign(tf.ones(shape=(768,),dtype=tf.float32))
+    print(model.layers[-1].trainable_weights[-1])
 
-    model.summary()
+    print(model.trainable_weights)
+

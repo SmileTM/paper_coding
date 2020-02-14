@@ -12,6 +12,7 @@ import modeling
 import utils
 
 
+# Todo 导入google权重
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
         super(Pretraining_mask_label_loss_layer, self).__init__()
@@ -49,7 +50,7 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
 
         one_hot_labels = tf.one_hot(label_ids, depth=self.config.vocab_size, dtype=tf.float32)
 
-        per_example_loss = -tf.reduce_sum(log_probs*one_hot_labels, axis=-1)
+        per_example_loss = -tf.reduce_sum(log_probs * one_hot_labels, axis=-1)
         numerator = tf.reduce_sum(label_weights * per_example_loss)
         denominator = tf.reduce_sum(label_weights) + 1e-5
         loss = numerator / denominator
@@ -91,6 +92,7 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
 
         per_example_loss = - tf.reduce_sum(log_probs * one_hor_labels, axis=-1)
         loss = tf.reduce_mean(per_example_loss)
+
         return loss
 
 
@@ -120,32 +122,45 @@ def getPretrainingModel():
     bert_model = modeling.BertModel(config)
     pooled_output, sequence_output = bert_model((input_word_ids, input_mask, input_type_ids))
 
-    mask_label_loss = Pretraining_mask_label_loss_layer(source_network=bert_model, name='mask_label_loss')((sequence_output,
-                                                                                          masked_lm_positions,
-                                                                                          masked_lm_ids,
-                                                                                          masked_lm_weights))
-    next_sentence_loss = Pretraining_next_sentence_loss_layer(source_network=bert_model, name='next_sentence_loss')((pooled_output,
-                                                                                                next_sentence_labels))
+    mask_label_loss = Pretraining_mask_label_loss_layer(source_network=bert_model,
+                                                        name='mask_label_loss')((sequence_output,
+                                                                                 masked_lm_positions,
+                                                                                 masked_lm_ids,
+                                                                                 masked_lm_weights))
 
-    inputs = [input_word_ids, input_mask, input_type_ids, masked_lm_positions, masked_lm_ids, masked_lm_weights,
-              next_sentence_labels]
-    outputs = mask_label_loss+next_sentence_loss
+    next_sentence_loss = Pretraining_next_sentence_loss_layer(source_network=bert_model,
+                                                              name='next_sentence_loss')((pooled_output,
+                                                                                          next_sentence_labels))
+
+    inputs = [input_word_ids, input_mask, input_type_ids, masked_lm_positions,
+              masked_lm_ids, masked_lm_weights, next_sentence_labels]
+
+    # 将经过reduce_sum得到的无维度数值，添加一个维度，避免传入loss keras计算出错
+    outputs = tf.expand_dims(mask_label_loss + next_sentence_loss, axis=0)
+
     pretraining_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
 
     return pretraining_model
 
 
-
 def train():
-    pretrainingModel=getPretrainingModel()
+    pretrainingModel = getPretrainingModel()
     pretrainingModel.summary()
     print(pretrainingModel.layers)
     print(len(pretrainingModel.layers))
-    pretrainingModel.submodules
+    pretrainingModel.save_weights('./out/allmodel-ckpt')
 
     # myloss = lambda y_true,y_pred:y_pred
     # pretrainingModel.compile(optimizer=tf.keras.optimizers.Adam(),
     #                          loss=myloss)
+    # pretrainingModel.fit(mydataset)
+
+
+def load():
+    config = modeling.BertConfig()
+    mode = getPretrainingModel()
+    mode.load_weights('./out/allmodel-ckpt')
+
 
 if __name__ == '__main__':
-    train()
+    load()
