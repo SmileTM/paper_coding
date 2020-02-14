@@ -13,12 +13,12 @@ import copy
 
 class BertConfig(object):
     def __init__(self,
-                 vocab_size=20000,
+                 vocab_size=30522,
                  n_head=12,
                  d_hidden=768,
                  num_hidden_layers=12,
                  d_intermediate=3072,
-                 max_position_embedding=512,
+                 max_position_embedding=128,
                  type_vocab_size=16,
                  hidden_act='gelu',
                  initializer_range=0.02,
@@ -73,8 +73,8 @@ class BertModel(tf.keras.layers.Layer):
         super(BertModel, self).build(input_shape)
 
     def call(self, inputs, mode="bert"):
-        (input_word_ids, input_mask, input_type_ids) = inputs
-        input_tensor = self.embedding_processor((input_word_ids, input_type_ids))
+        (input_ids, input_mask, segment_ids) = inputs
+        input_tensor = self.embedding_processor((input_ids, segment_ids))
         attention_mask = create_attention_mask_from_input_mask(input_mask)
 
         if mode == 'encoder':
@@ -139,9 +139,9 @@ class EmbeddingProcessor(tf.keras.layers.Layer):
         super(EmbeddingProcessor, self).build(input_shape)
 
     def call(self, inputs):
-        input_word_ids, input_type_ids = inputs
-        token_word_embeddings = self.embedding_word_ids(input_word_ids)  # [batch_size, seq_length, hidden_size]
-        token_type_embeddings = self.embedding_type_ids(input_type_ids)  # [batch_size, seq_length, hidden_size]
+        input_ids, segment_ids = inputs
+        token_word_embeddings = self.embedding_word_ids(input_ids)  # [batch_size, seq_length, hidden_size]
+        token_type_embeddings = self.embedding_type_ids(segment_ids)  # [batch_size, seq_length, hidden_size]
         token_pos_embeddings = tf.expand_dims(self.embedding_pos, axis=0)  # [1, seq_length, hidden_size]
 
         output = token_word_embeddings + token_type_embeddings + token_pos_embeddings
@@ -351,15 +351,15 @@ def create_attention_mask_from_input_mask(mask):
 
 
 if __name__ == '__main__':
-    input_word_ids = tf.keras.layers.Input(shape=(512,))
+    input_ids = tf.keras.layers.Input(shape=(512,))
     input_mask = tf.keras.layers.Input(shape=(512,))
-    input_type_ids = tf.keras.layers.Input(shape=(512,))
+    segment_ids = tf.keras.layers.Input(shape=(512,))
 
     config = BertConfig(max_position_embedding=512)
     bertModel = BertModel(config)
-    output = bertModel((input_word_ids, input_mask, input_type_ids))
+    output = bertModel((input_ids, input_mask, segment_ids))
 
-    model = tf.keras.Model(inputs=(input_type_ids, input_mask, input_word_ids), outputs=output)
+    model = tf.keras.Model(inputs=(segment_ids, input_mask, input_ids), outputs=output)
     #
     # print(model.trainable_weights)
     # model.summary()

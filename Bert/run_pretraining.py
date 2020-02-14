@@ -10,8 +10,40 @@
 import tensorflow as tf
 import modeling
 import utils
+from absl import flags
+from absl import app
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+    "bert_config_file", None,
+    "The config json file corresponding to the pre-trained BERT model. "
+    "This specifies the model architecture.")
+
+# 导入 由creat_pretraining_data创建的tfrecord数据文件
+flags.DEFINE_string(
+    "input_file", "./tf_examples.tfrecord",
+    "Input TF example files (can be a glob or comma separated).")
+
+flags.DEFINE_string(
+    "output_dir", "./out",
+    "The output directory where the model checkpoints will be written.")
+# Model training specific flags.
+flags.DEFINE_integer(
+    'max_seq_length', 128,
+    'The maximum total input sequence length after WordPiece tokenization. '
+    'Sequences longer than this will be truncated, and sequences shorter '
+    'than this will be padded.')
+flags.DEFINE_integer('max_predictions_per_seq', 20,
+                     'Maximum predictions per sequence_output.')
+flags.DEFINE_integer('train_batch_size', 2, 'Total batch size for training.')
+flags.DEFINE_integer('num_steps_per_epoch', 1000,
+                     'Total number of training steps to run per epoch.')
+flags.DEFINE_float('warmup_steps', 10000,
+                   'Warmup steps for Adam weight decay optimizer.')
 
 
+# Todo 参数flag 化
 # Todo 导入google权重
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
@@ -54,6 +86,7 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
         numerator = tf.reduce_sum(label_weights * per_example_loss)
         denominator = tf.reduce_sum(label_weights) + 1e-5
         loss = numerator / denominator
+
         return loss
 
     def gather_indexes(self, sequence_tensor, positions):
@@ -92,20 +125,19 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
 
         per_example_loss = - tf.reduce_sum(log_probs * one_hor_labels, axis=-1)
         loss = tf.reduce_mean(per_example_loss)
-
         return loss
 
 
 def getPretrainingModel():
     config = modeling.BertConfig()
-    seq_length = 512
+    seq_length = 128
     max_predictions_per_seq = 20
-    input_word_ids = tf.keras.layers.Input(
-        shape=(seq_length,), name='input_word_ids', dtype=tf.int32)
+    input_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_ids', dtype=tf.int32)
     input_mask = tf.keras.layers.Input(
         shape=(seq_length,), name='input_mask', dtype=tf.int32)
-    input_type_ids = tf.keras.layers.Input(
-        shape=(seq_length,), name='input_type_ids', dtype=tf.int32)
+    segment_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='segment_ids', dtype=tf.int32)
     masked_lm_positions = tf.keras.layers.Input(
         shape=(max_predictions_per_seq,),
         name='masked_lm_positions',
@@ -120,7 +152,7 @@ def getPretrainingModel():
         shape=(1,), name='next_sentence_labels', dtype=tf.int32)
 
     bert_model = modeling.BertModel(config)
-    pooled_output, sequence_output = bert_model((input_word_ids, input_mask, input_type_ids))
+    pooled_output, sequence_output = bert_model((input_ids, input_mask, segment_ids))
 
     mask_label_loss = Pretraining_mask_label_loss_layer(source_network=bert_model,
                                                         name='mask_label_loss')((sequence_output,
@@ -132,27 +164,68 @@ def getPretrainingModel():
                                                               name='next_sentence_loss')((pooled_output,
                                                                                           next_sentence_labels))
 
-    inputs = [input_word_ids, input_mask, input_type_ids, masked_lm_positions,
+    inputs = [input_ids, input_mask, segment_ids, masked_lm_positions,
               masked_lm_ids, masked_lm_weights, next_sentence_labels]
 
     # 将经过reduce_sum得到的无维度数值，添加一个维度，避免传入loss keras计算出错
-    outputs = tf.expand_dims(mask_label_loss + next_sentence_loss, axis=0)
+    outputs = tf.expand_dims(mask_label_loss + next_sentence_loss,axis=0)
+
 
     pretraining_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
 
     return pretraining_model
 
 
-def train():
-    pretrainingModel = getPretrainingModel()
-    pretrainingModel.summary()
-    print(pretrainingModel.layers)
-    print(len(pretrainingModel.layers))
-    pretrainingModel.save_weights('./out/allmodel-ckpt')
+def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_seq):
+    def parse_function(example):
+        # 这里的dtype 类型只有 float32, int64, string
+        feature_description = {
+            "input_ids":
+                tf.io.FixedLenFeature([max_seq_length], tf.int64),
+            "input_mask":
+                tf.io.FixedLenFeature([max_seq_length], tf.int64),
+            "segment_ids":
+                tf.io.FixedLenFeature([max_seq_length], tf.int64),
+            "masked_lm_positions":
+                tf.io.FixedLenFeature([max_predictions_per_seq], tf.int64),
+            "masked_lm_ids":
+                tf.io.FixedLenFeature([max_predictions_per_seq], tf.int64),
+            "masked_lm_weights":
+                tf.io.FixedLenFeature([max_predictions_per_seq], tf.float32),
+            "next_sentence_labels":
+                tf.io.FixedLenFeature([1], tf.int64),
+        }
 
-    # myloss = lambda y_true,y_pred:y_pred
-    # pretrainingModel.compile(optimizer=tf.keras.optimizers.Adam(),
-    #                          loss=myloss)
+        parse_example = tf.io.parse_single_example(example, feature_description)
+
+        x = {
+            'input_ids': parse_example['input_ids'],
+            'input_mask': parse_example['input_mask'],
+            'segment_ids': parse_example['segment_ids'],
+            'masked_lm_positions': parse_example['masked_lm_positions'],
+            'masked_lm_ids': parse_example['masked_lm_ids'],
+            'masked_lm_weights': parse_example['masked_lm_weights'],
+            'next_sentence_labels': parse_example['next_sentence_labels']
+
+        }
+        y = parse_example['masked_lm_weights']
+
+        return (x, y)
+
+    raw_dataset = tf.data.TFRecordDataset(file_path)
+
+    dataset = raw_dataset.map(parse_function)
+    dataset = dataset.batch(batch_size=train_batch_size, drop_remainder=True)
+    return dataset
+
+
+def train(model):
+    pretrainingModel = model
+    pretrainingModel.summary()
+
+    myloss = lambda y_true, y_pred: y_pred
+    pretrainingModel.compile(optimizer=tf.keras.optimizers.Adam(),
+                             loss=myloss)
     # pretrainingModel.fit(mydataset)
 
 
@@ -162,5 +235,21 @@ def load():
     mode.load_weights('./out/allmodel-ckpt')
 
 
+def main(_):
+    dataset = load_data(train_batch_size=FLAGS.train_batch_size,
+                        file_path=FLAGS.input_file,
+                        max_seq_length=FLAGS.max_seq_length,
+                        max_predictions_per_seq=FLAGS.max_predictions_per_seq)
+    pretraining_model = getPretrainingModel()
+    pretraining_model.summary()
+    myloss = lambda y_true, y_pred: y_pred
+    pretraining_model.compile(optimizer=tf.keras.optimizers.Adam(),
+                              loss=myloss)
+    pretraining_model.fit(dataset, epochs=10)
+
+
 if __name__ == '__main__':
-    load()
+    flags.mark_flag_as_required("input_file")
+    flags.mark_flag_as_required("output_dir")
+
+    app.run(main)
