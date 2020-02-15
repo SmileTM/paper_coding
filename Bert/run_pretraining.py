@@ -10,6 +10,8 @@
 import tensorflow as tf
 import modeling
 import utils
+import os
+import optimization
 from absl import flags
 from absl import app
 
@@ -41,6 +43,8 @@ flags.DEFINE_integer('num_steps_per_epoch', 1000,
                      'Total number of training steps to run per epoch.')
 flags.DEFINE_float('warmup_steps', 10000,
                    'Warmup steps for Adam weight decay optimizer.')
+
+flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
 
 
 # Todo 参数flag 化
@@ -128,6 +132,34 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
         return loss
 
 
+class TrainCallback(tf.keras.callbacks.Callback):
+    def __init__(self, num_train_steps, save_path):
+        self.num_train_steps = num_train_steps
+        self.step = 0
+        self.save_path = save_path
+
+    def on_batch_end(self, batch, logs=None):
+        if self.step < self.num_train_steps:
+            self.step += 1
+        else:
+            self.model.save_weights(os.path.join(self.save_path, f'step-{self.step}-ckpt'))
+            self.model.stop_training = True
+
+
+def get_callbasks(num_train_steps, save_path):
+    TensorBoardCallback = tf.keras.callbacks.TensorBoard(log_dir=os.path.join(save_path, 'logs'), update_freq='batch')
+    TrainCallback(num_train_steps=num_train_steps, save_path=save_path)
+    SaveCallback = tf.keras.callbacks.ModelCheckpoint(filepath=save_path,
+                                                      monitor='loss',
+                                                      save_best_only=True,
+                                                      save_weights_only=True,
+                                                      save_freq=5000)
+    InfoCallback = tf.keras.callbacks.CSVLogger(os.path.join(save_path, 'pretrain.log'))
+
+    callbacks = [TrainCallback, SaveCallback, InfoCallback]
+    return callbacks
+
+
 def getPretrainingModel():
     config = modeling.BertConfig()
     seq_length = 128
@@ -168,8 +200,7 @@ def getPretrainingModel():
               masked_lm_ids, masked_lm_weights, next_sentence_labels]
 
     # 将经过reduce_sum得到的无维度数值，添加一个维度，避免传入loss keras计算出错
-    outputs = tf.expand_dims(mask_label_loss + next_sentence_loss,axis=0)
-
+    outputs = tf.expand_dims(mask_label_loss + next_sentence_loss, axis=0)
 
     pretraining_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
 
@@ -219,16 +250,6 @@ def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_s
     return dataset
 
 
-def train(model):
-    pretrainingModel = model
-    pretrainingModel.summary()
-
-    myloss = lambda y_true, y_pred: y_pred
-    pretrainingModel.compile(optimizer=tf.keras.optimizers.Adam(),
-                             loss=myloss)
-    # pretrainingModel.fit(mydataset)
-
-
 def load():
     config = modeling.BertConfig()
     mode = getPretrainingModel()
@@ -240,12 +261,16 @@ def main(_):
                         file_path=FLAGS.input_file,
                         max_seq_length=FLAGS.max_seq_length,
                         max_predictions_per_seq=FLAGS.max_predictions_per_seq)
+    callbacks = get_callbasks(num_train_steps=FLAGS.train_batch_size, save_path=FLAGS.output_dir)
     pretraining_model = getPretrainingModel()
     pretraining_model.summary()
-    myloss = lambda y_true, y_pred: y_pred
-    pretraining_model.compile(optimizer=tf.keras.optimizers.Adam(),
-                              loss=myloss)
-    pretraining_model.fit(dataset, epochs=10)
+    loss = lambda y_true, y_pred: y_pred
+    optimizer = optimization.create_optimizer(init_lr=FLAGS.learning_rate,
+                                              num_train_steps=FLAGS.train_batch_size,
+                                              num_warmup_steps=FLAGS.warmup_steps)
+
+    pretraining_model.compile(optimizer=optimizer, loss=loss)
+    pretraining_model.fit(dataset, epochs=100, callbacks=callbacks)
 
 
 if __name__ == '__main__':

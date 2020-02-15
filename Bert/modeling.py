@@ -368,6 +368,5 @@ if __name__ == '__main__':
     model.trainable_weights[-1].numpy= tf.random.uniform(shape=(768,),dtype=tf.float32)
     model.layers[-1].trainable_weights[-1].assign(tf.ones(shape=(768,),dtype=tf.float32))
     print(model.layers[-1].trainable_weights[-1])
-
     print(model.trainable_weights)
 
