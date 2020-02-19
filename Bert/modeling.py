@@ -13,17 +13,17 @@ import copy
 
 class BertConfig(object):
     def __init__(self,
-                 vocab_size=30522,
-                 n_head=12,
-                 d_hidden=768,
-                 num_hidden_layers=12,
-                 d_intermediate=3072,
-                 max_position_embedding=128,
-                 type_vocab_size=16,
-                 hidden_act='gelu',
-                 initializer_range=0.02,
-                 attention_dropout_rate=0.0,
-                 hidden_dropout_rate=0.0):
+                 vocab_size=30522,              # 字典大小
+                 n_head=12,                     # head个数
+                 d_hidden=768,                  # 隐藏层维度
+                 num_hidden_layers=12,          # Transformer层数
+                 d_intermediate=3072,           # FFN中Dense的维度
+                 max_position_embedding=512,    # 最大输入的长度
+                 type_vocab_size=16,            # vocab种类
+                 hidden_act='gelu',             # 激活函数
+                 initializer_range=0.02,        # 初始化率
+                 attention_dropout_rate=0.0,    # attnetion中droprate
+                 hidden_dropout_rate=0.0):      # attention外部的droprate
         self.vocab_size = vocab_size
         self.n_head = n_head
         self.d_hidden = d_hidden
@@ -365,8 +365,7 @@ if __name__ == '__main__':
     # model.summary()
     model.load_weights('./out/allmodel-ckpt')
     # print(model.trainable_weights)
-    model.trainable_weights[-1].numpy= tf.random.uniform(shape=(768,),dtype=tf.float32)
-    model.layers[-1].trainable_weights[-1].assign(tf.ones(shape=(768,),dtype=tf.float32))
+    model.trainable_weights[-1].numpy = tf.random.uniform(shape=(768,), dtype=tf.float32)
+    model.layers[-1].trainable_weights[-1].assign(tf.ones(shape=(768,), dtype=tf.float32))
     print(model.layers[-1].trainable_weights[-1])
     print(model.trainable_weights)
-

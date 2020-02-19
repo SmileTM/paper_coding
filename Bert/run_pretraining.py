@@ -17,10 +17,8 @@ from absl import app
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string(
-    "bert_config_file", None,
-    "The config json file corresponding to the pre-trained BERT model. "
-    "This specifies the model architecture.")
+# bertconfig 在main中定义
+#
 
 # 导入 由creat_pretraining_data创建的tfrecord数据文件
 flags.DEFINE_string(
@@ -32,13 +30,13 @@ flags.DEFINE_string(
     "The output directory where the model checkpoints will be written.")
 # Model training specific flags.
 flags.DEFINE_integer(
-    'max_seq_length', 128,
+    'max_seq_length', 512,
     'The maximum total input sequence length after WordPiece tokenization. '
     'Sequences longer than this will be truncated, and sequences shorter '
     'than this will be padded.')
 flags.DEFINE_integer('max_predictions_per_seq', 20,
                      'Maximum predictions per sequence_output.')
-flags.DEFINE_integer('train_batch_size', 2, 'Total batch size for training.')
+flags.DEFINE_integer('train_batch_size', 32, 'Total batch size for training.')
 flags.DEFINE_integer('num_steps_per_epoch', 1000,
                      'Total number of training steps to run per epoch.')
 flags.DEFINE_float('warmup_steps', 10000,
@@ -47,8 +45,6 @@ flags.DEFINE_float('warmup_steps', 10000,
 flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
 
 
-# Todo 参数flag 化
-# Todo 导入google权重
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
         super(Pretraining_mask_label_loss_layer, self).__init__()
@@ -160,10 +156,10 @@ def get_callbasks(num_train_steps, save_path):
     return callbacks
 
 
-def getPretrainingModel():
-    config = modeling.BertConfig()
-    seq_length = 128
-    max_predictions_per_seq = 20
+def getPretrainingModel(config, max_seq_length, max_predictions_per_seq):
+    config = config
+    seq_length = max_seq_length
+    max_predictions_per_seq = max_predictions_per_seq
     input_ids = tf.keras.layers.Input(
         shape=(seq_length,), name='input_ids', dtype=tf.int32)
     input_mask = tf.keras.layers.Input(
@@ -262,8 +258,23 @@ def main(_):
                         max_seq_length=FLAGS.max_seq_length,
                         max_predictions_per_seq=FLAGS.max_predictions_per_seq)
     callbacks = get_callbasks(num_train_steps=FLAGS.train_batch_size, save_path=FLAGS.output_dir)
-    pretraining_model = getPretrainingModel()
+
+    config = modeling.BertConfig(vocab_size=30522,
+                                 n_head=12,
+                                 d_hidden=768,
+                                 num_hidden_layers=12,
+                                 d_intermediate=3072,
+                                 max_position_embedding=512,
+                                 type_vocab_size=16,
+                                 hidden_act='gelu',
+                                 initializer_range=0.02,
+                                 attention_dropout_rate=0.0,
+                                 hidden_dropout_rate=0.0)
+
+    pretraining_model = getPretrainingModel(config=config, max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+                                            max_seq_length=FLAGS.max_seq_length)
     pretraining_model.summary()
+
     loss = lambda y_true, y_pred: y_pred
     optimizer = optimization.create_optimizer(init_lr=FLAGS.learning_rate,
                                               num_train_steps=FLAGS.train_batch_size,
@@ -276,5 +287,7 @@ def main(_):
 if __name__ == '__main__':
     flags.mark_flag_as_required("input_file")
     flags.mark_flag_as_required("output_dir")
+    flags.mark_flag_as_required("max_seq_length")
+    flags.mark_flag_as_required("max_predictions_per_seq")
 
     app.run(main)
