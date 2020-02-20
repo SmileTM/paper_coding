@@ -4,13 +4,12 @@
 # Author: SmileTM
 # Site: s-tm.cn
 # Github: https://github.com/SmileTM
-# Time: 12.02.2020
+# Time: 02.12.2020
 #
 
 import tensorflow as tf
 import modeling
 import models
-import utils
 import os
 import optimization
 from absl import flags

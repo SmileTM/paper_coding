@@ -1,4 +1,4 @@
-# paper coding [TF2.0]
+# Paper Coding [TF2.0]
 
 1. NMT_with_Attenion　
 
@@ -13,4 +13,9 @@
     [Attention Is All You Need](http://arxiv.org/abs/1706.03762)
     
     **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Transformer)**
+ 
+3. Bert
+
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](http://arxiv.org/abs/1810.04805)
     
+    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Bert)**
