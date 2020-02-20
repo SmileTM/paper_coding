@@ -22,9 +22,14 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("bert_config_file", "./bert_config.json",
                     "Bert configuration file to define core bert layers.")
 
+flags.DEFINE_string(
+    "init_checkpoint", None,
+    "Initial checkpoint (usually from a pre-trained BERT model). "
+    "The checkpoint from tfX_ckpt_converter.py")
+
 # 导入 由creat_pretraining_data创建的tfrecord数据文件
 flags.DEFINE_string(
-    "input_file", "./tf_examples.tfrecord",
+    "input_file", "./tf_examples.tfrecor",
     "Input TF example files (can be a glob or comma separated).")
 
 flags.DEFINE_string(
@@ -138,15 +143,10 @@ def main(_):
                                                    max_predictions_per_seq=FLAGS.max_predictions_per_seq,
                                                    max_seq_length=FLAGS.max_seq_length)
     pretraining_model.summary()
-    print(pretraining_model.layers)
-    print(pretraining_model.trainable_weights)
-    a = pretraining_model.trainable_weights[-1]
-    print(a)
-    a.assign(tf.Variable([1, 1], dtype=tf.float32))
-    print(pretraining_model.trainable_weights)
 
-    # for i in pretraining_model.trainable_weights:
-    #     print(i.name,i.shape)
+    if FLAGS.init_checkpoint:
+        # 如果 init_checkpoint 存在 这用init_checkpoint 进行初始化， 相当于导入权重
+        pretraining_model.load_weights(FLAGS.init_checkpoint)
 
     loss = lambda y_true, y_pred: y_pred
     optimizer = optimization.create_optimizer(init_lr=FLAGS.learning_rate,
