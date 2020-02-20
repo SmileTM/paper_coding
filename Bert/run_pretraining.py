@@ -123,12 +123,6 @@ def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_s
     return dataset
 
 
-def load():
-    config = modeling.BertConfig()
-    mode = models.getPretrainingModel()
-    mode.load_weights('./out/allmodel-ckpt')
-
-
 def main(_):
     dataset = load_data(train_batch_size=FLAGS.train_batch_size,
                         file_path=FLAGS.input_file,
