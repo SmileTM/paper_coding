@@ -22,10 +22,10 @@ http://arxiv.org/abs/1810.04805
 ### 例子
 整体使用，就像使用正常的内部layer一样。
 ```python
-
     import tensorflow as tf
     import modeling
-    
+
+    assert tf.version.VERSION.startswith('2.')
     # 构建模型的输入
     input_ids = tf.keras.layers.Input(shape=(512,))
     input_mask = tf.keras.layers.Input(shape=(512,))
