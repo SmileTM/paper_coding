@@ -398,7 +398,7 @@ if __name__ == '__main__':
     model = tf.keras.Model(inputs=(segment_ids, input_mask, input_ids), outputs=output)
     #
     # print(model.trainable_weights)
-    # model.summary()
+    model.summary()
     model.load_weights('/Users/lollipop/Documents/paper_coding/Bert/out_new/bert_model.ckpt')
     # print(model.trainable_weights)
     # model.trainable_weights[-1].numpy = tf.random.uniform(shape=(768,), dtype=tf.float32)
