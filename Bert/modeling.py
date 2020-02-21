@@ -329,7 +329,7 @@ class Transformer(tf.keras.layers.Layer):
         self.num_attention_heads = num_attention_heads
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
-        self.d_intermerdiate = intermediate_size
+        self.intermediate_size = intermediate_size
         self.hidden_act = hidden_act
         self.initializer_range = initializer_range
         self.hidden_dropout_prob = hidden_dropout_prob
@@ -341,7 +341,7 @@ class Transformer(tf.keras.layers.Layer):
         for i in range(self.num_hidden_layers):
             self.layers.append(TransformerBlock(num_attention_heads=self.num_attention_heads,
                                                 hidden_size=self.hidden_size,
-                                                intermediate_size=self.d_intermerdiate,
+                                                intermediate_size=self.intermediate_size,
                                                 hidden_act=self.hidden_act,
                                                 initializer_range=self.initializer_range,
                                                 hidden_dropout_prob=self.hidden_dropout_prob,
