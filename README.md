@@ -1,24 +1,6 @@
 # Paper Coding [TF2.0]
 
-reimplement code from paper 
-
-4. Albert
-
-    [ALBERT: A Lite BERT for Self-supervised Learning of Language Representations](http://arxiv.org/abs/1909.11942)
-    
-     **[[code]](https://github.com/SmileTM/paper_coding/tree/master/ALBert)**
-     
-3. Bert
-
-    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](http://arxiv.org/abs/1810.04805)
-    
-    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Bert)**
-    
-2. Transformer_block
-
-    [Attention Is All You Need](http://arxiv.org/abs/1706.03762)
-    
-    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Transformer)**
+reimplement code from paper by Tensorflow2.0
 
 1. NMT_with_Attenion　
 
@@ -28,7 +10,20 @@ reimplement code from paper
 
     **[[code]](https://github.com/SmileTM/paper_coding/tree/master/NMT_attention)**
     
+2. Transformer_block
 
- 
-
+    [Attention Is All You Need](http://arxiv.org/abs/1706.03762)
     
+    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Transformer)**
+ 
+3. Bert
+
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](http://arxiv.org/abs/1810.04805)
+    
+    **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Bert)**
+    
+4. Albert
+
+    [ALBERT: A Lite BERT for Self-supervised Learning of Language Representations](http://arxiv.org/abs/1909.11942)
+    
+     **[[code]](https://github.com/SmileTM/paper_coding/tree/master/Bert)**
