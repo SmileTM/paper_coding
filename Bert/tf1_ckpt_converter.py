@@ -31,6 +31,8 @@ flags.DEFINE_integer("max_seq_length", 512, "Maximum sequence length.")
 
 flags.DEFINE_integer("max_predictions_per_seq", 20,
                      "Maximum number of masked LM predictions per sequence.")
+
+
 def re_map_tf1(name):
     # 通过正则来进行模型名字映射
     tensor_name = name
@@ -58,38 +60,42 @@ def re_map_tf1(name):
                          r"bert/encoder/layer_\1/intermediate/dense/kernel", tensor_name)
     tensor_name = re.sub(r"bert/encoder/layer_(\d+)/intermediate/bias:0",
                          r"bert/encoder/layer_\1/intermediate/dense/bias", tensor_name)
-    tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output/kernel:0", r"bert/encoder/layer_\1/output/dense/kernel",
-                         tensor_name)
-    tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output/bias:0", r"bert/encoder/layer_\1/output/dense/bias",
-                         tensor_name)
+    tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output/kernel:0",
+                         r"bert/encoder/layer_\1/output/dense/kernel", tensor_name)
+    tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output/bias:0",
+                         r"bert/encoder/layer_\1/output/dense/bias", tensor_name)
     tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output_layer_norm/gamma:0",
                          r"bert/encoder/layer_\1/output/LayerNorm/gamma", tensor_name)
     tensor_name = re.sub(r"bert/encoder/layer_(\d+)/output_layer_norm/beta:0",
                          r"bert/encoder/layer_\1/output/LayerNorm/beta", tensor_name)
-
-    tensor_name = re.sub(r"bert/embedding_processor/embedding_pos/embeddings:0", r"bert/embeddings/position_embeddings",
-                         tensor_name)
+    tensor_name = re.sub(r"bert/embedding_processor/embedding_pos/embeddings:0",
+                         r"bert/embeddings/position_embeddings", tensor_name)
     tensor_name = re.sub(r"bert/embedding_processor/embedding_word_ids/embeddings:0",
                          r"bert/embeddings/word_embeddings", tensor_name)
     tensor_name = re.sub(r"bert/embedding_processor/embedding_type_ids/embeddings:0",
                          r"bert/embeddings/token_type_embeddings", tensor_name)
-    tensor_name = re.sub(r"bert/embedding_processor/layer_norm/gamma:0", r"bert/embeddings/LayerNorm/gamma",
-                         tensor_name)
-    tensor_name = re.sub(r"bert/embedding_processor/layer_norm/beta:0", r"bert/embeddings/LayerNorm/beta", tensor_name)
-    tensor_name = re.sub(r"bert/pooler_transform/kernel:0", r"bert/pooler/dense/kernel", tensor_name)
-    tensor_name = re.sub(r"bert/pooler_transform/bias:0", r"bert/pooler/dense/bias", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/output_bias:0", r"cls/predictions/output_bias",
-                         tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/kernel:0", r"cls/predictions/transform/dense/kernel",
-                         tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/bias:0", r"cls/predictions/transform/dense/bias",
-                         tensor_name)
+    tensor_name = re.sub(r"bert/embedding_processor/layer_norm/gamma:0",
+                         r"bert/embeddings/LayerNorm/gamma", tensor_name)
+    tensor_name = re.sub(r"bert/embedding_processor/layer_norm/beta:0",
+                         r"bert/embeddings/LayerNorm/beta", tensor_name)
+    tensor_name = re.sub(r"bert/pooler_transform/kernel:0",
+                         r"bert/pooler/dense/kernel", tensor_name)
+    tensor_name = re.sub(r"bert/pooler_transform/bias:0",
+                         r"bert/pooler/dense/bias", tensor_name)
+    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/output_bias:0",
+                         r"cls/predictions/output_bias", tensor_name)
+    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/kernel:0",
+                         r"cls/predictions/transform/dense/kernel", tensor_name)
+    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/bias:0",
+                         r"cls/predictions/transform/dense/bias", tensor_name)
     tensor_name = re.sub(r"pretraining_mask_label_loss_layer/layer_norm/gamma:0",
                          r"cls/predictions/transform/LayerNorm/gamma", tensor_name)
     tensor_name = re.sub(r"pretraining_mask_label_loss_layer/layer_norm/beta:0",
                          r"cls/predictions/transform/LayerNorm/beta", tensor_name)
-    tensor_name = re.sub(r"next_sentence_loss/dense_1/kernel:0", r"cls/seq_relationship/output_weights", tensor_name)
-    tensor_name = re.sub(r"next_sentence_loss/dense_1/bias:0", r"cls/seq_relationship/output_bias", tensor_name)
+    tensor_name = re.sub(r"next_sentence_loss/dense_1/kernel:0",
+                         r"cls/seq_relationship/output_weights", tensor_name)
+    tensor_name = re.sub(r"next_sentence_loss/dense_1/bias:0",
+                         r"cls/seq_relationship/output_bias", tensor_name)
 
     return tensor_name
 
