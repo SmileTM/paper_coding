@@ -19,12 +19,12 @@ from absl import app
 FLAGS = flags.FLAGS
 
 # bertconfig
-flags.DEFINE_string("bert_config_file", "./bert_config.json",
-                    "Bert configuration file to define core bert layers.")
+flags.DEFINE_string("albert_config_file", "./albert_config.json",
+                    "Albert configuration file to define core Albert layers.")
 
 flags.DEFINE_string(
     "init_checkpoint", None,
-    "Initial checkpoint (usually from a pre-trained BERT model). "
+    "Initial checkpoint (usually from a pre-trained ALBERT model). "
     "The checkpoint from tfX_ckpt_converter.py")
 
 # 导入 由creat_pretraining_data创建的tfrecord数据文件
@@ -131,7 +131,7 @@ def main(_):
 
     callbacks = get_callbasks(num_train_steps=FLAGS.train_batch_size, save_path=FLAGS.output_dir)
 
-    config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+    config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
 
     pretraining_model = models.getPretrainingModel(config=config,
                                                    max_predictions_per_seq=FLAGS.max_predictions_per_seq,
