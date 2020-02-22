@@ -173,6 +173,16 @@ class EmbeddingProcessor(tf.keras.layers.Layer):
         output = self.output_dropout(output)
         return output
 
+    def get_config(self):
+        config = super(EmbeddingProcessor, self).get_config()
+        config.update({"vocab_szie": self.vocab_size,
+                       "width": self.width,
+                       "max_position_embeddings": self.max_position_embeddings,
+                       "type_vocab_size": self.type_vocab_size,
+                       "hidden_dropout_prob": self.hidden_dropout_prob,
+                       "initializer_range": self.initializer_range})
+        return config
+
 
 class Atttention(tf.keras.layers.Layer):
     def __init__(self,
@@ -249,6 +259,14 @@ class Atttention(tf.keras.layers.Layer):
         out = tf.einsum('BNFf,BNfD->BNFD', attention_probs, v)
         return out
 
+    def get_config(self):
+        config = super(Atttention, self).get_config()
+        config.update({"hidden_size": self.hidden_size,
+                       "num_attention_heads": self.num_attention_heads,
+                       "dropout_rate": self.num_attention_heads,
+                       "initializer_range": self.initializer_range})
+        return config
+
 
 class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self,
@@ -311,6 +329,18 @@ class TransformerBlock(tf.keras.layers.Layer):
 
         return layer_output
 
+    def get_config(self):
+        config = super(TransformerBlock, self).get_config()
+        config.updata({"num_attention_heads": self.num_attention_heads,
+                       "hidden_size": self.hidden_size,
+                       "intermediate_size": self.initializer_range,
+                       "hidden_act": self.hidden_act,
+                       "initializer_range": self.initializer_range,
+                       "hidden_dropout_prob": self.hidden_dropout_prob,
+                       "attention_probs_dropout_prob": self.attention_probs_dropout_prob
+                       })
+        return config
+
 
 class Transformer(tf.keras.layers.Layer):
     def __init__(self,
@@ -351,9 +381,7 @@ class Transformer(tf.keras.layers.Layer):
 
     def call(self, inputs, return_all_layers=False):
         input_tensro, attention_mask = inputs
-
         output_tensor = self.embedding_hidden_map(input_tensro)
-
         all_layer_outputs = []
         for layer in self.layers:
             output_tensor = layer((output_tensor, attention_mask))
@@ -362,6 +390,19 @@ class Transformer(tf.keras.layers.Layer):
             return all_layer_outputs
 
         return all_layer_outputs[-1]
+
+    def get_config(self):
+        config = super(Transformer, self).get_config()
+        config.update({"num_attention_heads": self.num_attention_heads,
+                       "hidden_size": self.hidden_size,
+                       "num_hidden_layers": self.num_hidden_layers,
+                       "intermediate_size": self.intermediate_size,
+                       "hidden_act": self.hidden_act,
+                       "initializer_range": self.initializer_range,
+                       "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
+                       "hidden_dropout_prob": self.hidden_dropout_prob,
+                       })
+        return config
 
 
 def get_initializer(initializer_range=0.02):
@@ -407,6 +448,12 @@ if __name__ == '__main__':
         print(i.name, i.shape)
     model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/bert_model.ckpt")
     print(model.trainable_weights)
+
+    print("out")
+    wids = tf.reshape(tf.constant(range(512 * 8), tf.float32), (8, 512))
+    types = tf.constant(tf.zeros((8, 512)), tf.float32)
+    mask = tf.constant(tf.ones((8, 512)), dtype=tf.float32)
+    print(model((types, wids, mask)))
     # model.load_weights('/Users/lollipop/Documents/paper_coding/Bert/out_new/bert_model.ckpt')
     # # print(model.trainable_weights)
     # # model.trainable_weights[-1].numpy = tf.random.uniform(shape=(768,), dtype=tf.float32)
