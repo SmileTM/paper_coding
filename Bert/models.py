@@ -11,11 +11,14 @@ import tensorflow as tf
 import utils
 import modeling
 
+
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
-    def __init__(self, source_network, **kwargs):
+    def __init__(self, source_network, every_device_batch_size, **kwargs):
         super(Pretraining_mask_label_loss_layer, self).__init__()
-        self.config = source_network.config
-        self.embedding_table = source_network.embedding_processor.embedding_word_ids.embeddings
+        self.source_network = source_network
+        self.batch_size = every_device_batch_size
+        self.config = self.source_network.config
+        self.embedding_table = self.source_network.embedding_processor.embedding_word_ids.embeddings
 
     def build(self, input_shape):
         self.dense = tf.keras.layers.Dense(units=self.config.hidden_size,
@@ -57,7 +60,7 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
 
     def gather_indexes(self, sequence_tensor, positions):
         sequence_tensor_shape = sequence_tensor.shape
-        batch_size = sequence_tensor_shape[0]
+        batch_size = self.batch_size
         seq_length = sequence_tensor_shape[1]
         width = sequence_tensor_shape[2]
 
@@ -69,10 +72,19 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
         output_tensor = tf.gather(flat_sequencea_tensor, flat_position)
         return output_tensor
 
+    def get_config(self):
+        config = super(Pretraining_mask_label_loss_layer, self).get_config()
+        config.update({
+            "source_network": self.source_network,
+            "batche_size": self.batch_size
+        })
+        return config
+
 
 class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
-        self.config = source_network.config
+        self.source_network = source_network
+        self.config = self.source_network.config
         super(Pretraining_next_sentence_loss_layer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -93,8 +105,15 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
         loss = tf.reduce_mean(per_example_loss)
         return loss
 
+    def get_config(self):
+        config = super(Pretraining_next_sentence_loss_layer, self).get_config()
+        config.update({
+            "source_network": self.source_network
+        })
+        return config
 
-def getPretrainingModel(config, max_seq_length, max_predictions_per_seq=20):
+
+def getPretrainingModel(config,  max_seq_length, every_device_batch_size=1,max_predictions_per_seq=20):
     config = config
     seq_length = max_seq_length
     max_predictions_per_seq = max_predictions_per_seq
@@ -117,10 +136,11 @@ def getPretrainingModel(config, max_seq_length, max_predictions_per_seq=20):
     next_sentence_labels = tf.keras.layers.Input(
         shape=(1,), name='next_sentence_labels', dtype=tf.int32)
 
-    bert_model = modeling.BertModel(config,name="bert")
+    bert_model = modeling.BertModel(config, name="bert")
     pooled_output, sequence_output = bert_model((input_ids, input_mask, segment_ids))
 
     mask_label_loss = Pretraining_mask_label_loss_layer(source_network=bert_model,
+                                                        every_device_batch_size=every_device_batch_size,
                                                         name='mask_label_loss')((sequence_output,
                                                                                  masked_lm_positions,
                                                                                  masked_lm_ids,

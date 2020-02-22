@@ -12,11 +12,14 @@ import tensorflow as tf
 import utils
 import modeling
 
+
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
-    def __init__(self, source_network, **kwargs):
+    def __init__(self, source_network, every_device_batch_size, **kwargs):
         super(Pretraining_mask_label_loss_layer, self).__init__()
-        self.config = source_network.config
-        self.embedding_table = source_network.embedding_processor.embedding_word_ids.embeddings
+        self.source_network = source_network
+        self.batch_size = every_device_batch_size
+        self.config = self.source_network.config
+        self.embedding_table = self.source_network.embedding_processor.embedding_word_ids.embeddings
 
     def build(self, input_shape):
         self.dense = tf.keras.layers.Dense(units=self.config.embedding_size,
@@ -59,7 +62,7 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
 
     def gather_indexes(self, sequence_tensor, positions):
         sequence_tensor_shape = sequence_tensor.shape
-        batch_size = sequence_tensor_shape[0]
+        batch_size = self.batch_size
         seq_length = sequence_tensor_shape[1]
         width = sequence_tensor_shape[2]
 
@@ -71,10 +74,19 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
         output_tensor = tf.gather(flat_sequencea_tensor, flat_position)
         return output_tensor
 
+    def get_config(self):
+        config = super(Pretraining_mask_label_loss_layer, self).get_config()
+        config.update({
+            "source_network": self.source_network,
+            "batche_size": self.batch_size
+        })
+        return config
+
 
 class Pretraining_sentence_order_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
-        self.config = source_network.config
+        self.source_network = source_network
+        self.config = self.source_network.config
         super(Pretraining_sentence_order_loss_layer, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -95,8 +107,15 @@ class Pretraining_sentence_order_loss_layer(tf.keras.layers.Layer):
         loss = tf.reduce_mean(per_example_loss)
         return loss
 
+    def get_config(self):
+        config = super(Pretraining_sentence_order_loss_layer, self).get_config()
+        config.update({
+            "source_network": self.source_network
+        })
+        return config
 
-def getPretrainingModel(config, max_seq_length=512, max_predictions_per_seq=20):
+
+def getPretrainingModel(config, max_seq_length=512, every_device_batch_size=1, max_predictions_per_seq=20):
     config = config
     seq_length = max_seq_length
     max_predictions_per_seq = max_predictions_per_seq
@@ -116,24 +135,25 @@ def getPretrainingModel(config, max_seq_length=512, max_predictions_per_seq=20):
         shape=(max_predictions_per_seq,),
         name='masked_lm_weights',
         dtype=tf.int32)
-    next_sentence_labels = tf.keras.layers.Input(
-        shape=(1,), name='next_sentence_labels', dtype=tf.int32)
+    seq_relationship = tf.keras.layers.Input(
+        shape=(1,), name='seq_relationship', dtype=tf.int32)
 
-    albert_model = modeling.AlbertModel(config,name="albert")
+    albert_model = modeling.AlbertModel(config, name="albert")
     pooled_output, sequence_output = albert_model((input_ids, input_mask, segment_ids))
 
     mask_label_loss = Pretraining_mask_label_loss_layer(source_network=albert_model,
+                                                        every_device_batch_size=every_device_batch_size,
                                                         name='mask_label_loss')((sequence_output,
                                                                                  masked_lm_positions,
                                                                                  masked_lm_ids,
                                                                                  masked_lm_weights))
 
     next_sentence_loss = Pretraining_sentence_order_loss_layer(source_network=albert_model,
-                                                              name='seq_relationship')((pooled_output,
-                                                                                          next_sentence_labels))
+                                                               name='next_sentence_labels')((pooled_output,
+                                                                                             seq_relationship))
 
     inputs = [input_ids, input_mask, segment_ids, masked_lm_positions,
-              masked_lm_ids, masked_lm_weights, next_sentence_labels]
+              masked_lm_ids, masked_lm_weights, seq_relationship]
 
     # 将经过reduce_sum得到的无维度数值，添加一个维度，避免传入loss keras计算出错
     outputs = tf.expand_dims(mask_label_loss + next_sentence_loss, axis=0)
