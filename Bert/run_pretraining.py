@@ -49,7 +49,8 @@ flags.DEFINE_float('warmup_steps', 10000,
                    'Warmup steps for Adam weight decay optimizer.')
 
 flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
-
+flags.DEFINE_bool("data_shuffle_flag", True, "shuffle data of shuffle_buffer")
+flags.DEFINE_integer("data_shuffle_buffer", 10000, "shuffle_buffer_size")
 
 class TrainCallback(tf.keras.callbacks.Callback):
     def __init__(self, num_train_steps, save_path):
@@ -79,7 +80,7 @@ def get_callbasks(num_train_steps, save_path):
     return callbacks
 
 
-def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_seq):
+def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_seq, shuffle=True, shuffle_buffer=10000):
     def parse_function(example):
         # 这里的dtype 类型只有 float32, int64, string
         feature_description = {
@@ -118,6 +119,8 @@ def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_s
     raw_dataset = tf.data.TFRecordDataset(file_path)
 
     dataset = raw_dataset.map(parse_function)
+    if shuffle:  # 是否打乱数据
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     dataset = dataset.batch(batch_size=train_batch_size, drop_remainder=True)
     return dataset
 
@@ -126,7 +129,10 @@ def main(_):
     dataset = load_data(train_batch_size=FLAGS.train_batch_size,
                         file_path=FLAGS.input_file,
                         max_seq_length=FLAGS.max_seq_length,
-                        max_predictions_per_seq=FLAGS.max_predictions_per_seq)
+                        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+                        shuffle=FLAGS.data_shuffle_flag,
+                        shuffle_buffer=FLAGS.data_shuffle_buffer
+                        )
 
     callbacks = get_callbasks(num_train_steps=FLAGS.train_batch_size, save_path=FLAGS.output_dir)
 
