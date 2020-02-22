@@ -34,6 +34,9 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "output_dir", "./out",
     "The output directory where the model checkpoints will be written.")
+
+flags.DEFINE_integer('BATCH_SIZE', 32,
+                     'Total batch size for training. If you train on two GPUS, every GPU will get BATCH_SIZE/2')
 # Model training specific flags.
 flags.DEFINE_integer(
     'max_seq_length', 512,
@@ -42,15 +45,23 @@ flags.DEFINE_integer(
     'than this will be padded.')
 flags.DEFINE_integer('max_predictions_per_seq', 20,
                      'Maximum predictions per sequence_output.')
-flags.DEFINE_integer('train_batch_size', 32, 'Total batch size for training.')
+
 flags.DEFINE_integer('num_steps_per_epoch', 1000,
                      'Total number of training steps to run per epoch.')
+
+flags.DEFINE_integer("num_train_steps", 20, "Number of training steps.")
+
 flags.DEFINE_float('warmup_steps', 10000,
                    'Warmup steps for Adam weight decay optimizer.')
 
 flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
+
 flags.DEFINE_bool("data_shuffle_flag", True, "shuffle data of shuffle_buffer")
+
 flags.DEFINE_integer("data_shuffle_buffer", 10000, "shuffle_buffer_size")
+
+flags.DEFINE_bool("use_gpu", True, "use_gpu flag")
+
 
 class TrainCallback(tf.keras.callbacks.Callback):
     def __init__(self, num_train_steps, save_path):
@@ -80,7 +91,7 @@ def get_callbasks(num_train_steps, save_path):
     return callbacks
 
 
-def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_seq, shuffle=True, shuffle_buffer=10000):
+def load_data(file_path, BATCH_SIZE, max_seq_length, max_predictions_per_seq, shuffle=True, shuffle_buffer=10000):
     def parse_function(example):
         # 这里的dtype 类型只有 float32, int64, string
         feature_description = {
@@ -116,44 +127,53 @@ def load_data(file_path, train_batch_size, max_seq_length, max_predictions_per_s
 
         return (x, y)
 
-    raw_dataset = tf.data.TFRecordDataset(file_path)
+    raw_dataset = tf.data.TFRecordDataset(file_path, buffer_size=100, num_parallel_reads=8)
 
     dataset = raw_dataset.map(parse_function)
     if shuffle:  # 是否打乱数据
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
-    dataset = dataset.batch(batch_size=train_batch_size, drop_remainder=True)
+    dataset = dataset.batch(batch_size=BATCH_SIZE, drop_remainder=True)
     return dataset
 
 
 def main(_):
-    dataset = load_data(train_batch_size=FLAGS.train_batch_size,
+    device_num = 1
+    if FLAGS.use_gpu:
+        GPUS = tf.config.experimental.list_physical_devices(device_type='GPU')
+        num_gpus = len(GPUS)
+        if num_gpus:
+            device_num = num_gpus
+
+    dataset = load_data(BATCH_SIZE=FLAGS.BATCH_SIZE,
                         file_path=FLAGS.input_file,
                         max_seq_length=FLAGS.max_seq_length,
                         max_predictions_per_seq=FLAGS.max_predictions_per_seq,
                         shuffle=FLAGS.data_shuffle_flag,
                         shuffle_buffer=FLAGS.data_shuffle_buffer
                         )
+    strategy = tf.distribute.MirroredStrategy()
+    with strategy.scope():
+        callbacks = get_callbasks(num_train_steps=FLAGS.num_train_steps, save_path=FLAGS.output_dir)
 
-    callbacks = get_callbasks(num_train_steps=FLAGS.train_batch_size, save_path=FLAGS.output_dir)
+        config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
-    config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+        pretraining_model = models.getPretrainingModel(config=config,
+                                                       every_device_batch_size=int(FLAGS.BATCH_SIZE // device_num),
+                                                       max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+                                                       max_seq_length=FLAGS.max_seq_length)
+        pretraining_model.summary()
 
-    pretraining_model = models.getPretrainingModel(config=config,
-                                                   max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-                                                   max_seq_length=FLAGS.max_seq_length)
-    pretraining_model.summary()
+        if FLAGS.init_checkpoint:
+            # 如果 init_checkpoint 存在 这用init_checkpoint 进行初始化， 相当于导入权重
+            pretraining_model.load_weights(FLAGS.init_checkpoint)
 
-    if FLAGS.init_checkpoint:
-        # 如果 init_checkpoint 存在 这用init_checkpoint 进行初始化， 相当于导入权重
-        pretraining_model.load_weights(FLAGS.init_checkpoint)
+        loss = lambda y_true, y_pred: y_pred
+        optimizer = optimization.create_optimizer(init_lr=FLAGS.learning_rate,
+                                                  num_train_steps=FLAGS.num_train_steps,
+                                                  num_warmup_steps=FLAGS.warmup_steps)
 
-    loss = lambda y_true, y_pred: y_pred
-    optimizer = optimization.create_optimizer(init_lr=FLAGS.learning_rate,
-                                              num_train_steps=FLAGS.train_batch_size,
-                                              num_warmup_steps=FLAGS.warmup_steps)
-
-    pretraining_model.compile(optimizer=optimizer, loss=loss)
-    pretraining_model.fit(dataset, epochs=100, callbacks=callbacks)
+        pretraining_model.compile(optimizer=optimizer, loss=loss)
+        pretraining_model.fit(dataset, epochs=100, callbacks=callbacks)
 
 
 if __name__ == '__main__':
