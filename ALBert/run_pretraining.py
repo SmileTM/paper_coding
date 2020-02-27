@@ -137,12 +137,12 @@ def load_data(file_path, BATCH_SIZE, max_seq_length, max_predictions_per_seq, sh
 
 
 def main(_):
-    device_num = 1
-    if FLAGS.use_gpu:
-        GPUS = tf.config.experimental.list_physical_devices(device_type='GPU')
-        num_gpus = len(GPUS)
-        if num_gpus:
-            device_num = num_gpus
+    # device_num = 1
+    # if FLAGS.use_gpu:
+    #     GPUS = tf.config.experimental.list_physical_devices(device_type='GPU')
+    #     num_gpus = len(GPUS)
+    #     if num_gpus:
+    #         device_num = num_gpus
 
     dataset = load_data(BATCH_SIZE=FLAGS.BATCH_SIZE,
                         file_path=FLAGS.input_file,
@@ -158,7 +158,7 @@ def main(_):
         config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
 
         pretraining_model = models.getPretrainingModel(config=config,
-                                                       every_device_batch_size=int(FLAGS.BATCH_SIZE // device_num),
+                                                       every_device_batch_size=int(FLAGS.BATCH_SIZE // strategy.num_replicas_in_sync),
                                                        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
                                                        max_seq_length=FLAGS.max_seq_length)
         pretraining_model.summary()
