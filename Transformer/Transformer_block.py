@@ -26,7 +26,7 @@ class Attention(tf.keras.layers.Layer):
         attention_weights = qk / tf.sqrt(dk)
 
         if mask is not None:
-            attention_weights += (mask * -1e9)
+            attention_weights += ((1-mask) * -1e9)
         attention_weights = tf.nn.softmax(attention_weights, axis=-1)
 
         out = tf.einsum('bnlL,bnLd->bnld', attention_weights, v)
