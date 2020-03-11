@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class Attention(tf.keras.layers.Layer):
     def __init__(self, d_model, n_head):
         super(Attention, self).__init__()
@@ -20,20 +21,22 @@ class Attention(tf.keras.layers.Layer):
         '''
         input = tf.reshape(input, (batch_size, -1, n_head, d_head))
         return tf.einsum('blnd->bnld', input)
+
     def attention_procedure(self, q, k, v, mask):
         qk = tf.einsum('bnld,bnLd->bnlL', q, k)
         dk = tf.cast(k.shape[-1], qk.dtype)
         attention_weights = qk / tf.sqrt(dk)
 
         if mask is not None:
-            attention_weights += ((1-mask) * -1e9)
+            attention_weights += ((1 - mask) * -1e9)
         attention_weights = tf.nn.softmax(attention_weights, axis=-1)
 
         out = tf.einsum('bnlL,bnLd->bnld', attention_weights, v)
         return out, attention_weights
 
     def build(self, input_shape):
-        self.kernel = self.add_weight(name='kernel', shape=(self.n_head, self.d_head, self.d_model), trainable=True, dtype=tf.float32)
+        self.kernel = self.add_weight(name='kernel', shape=(self.n_head, self.d_head, self.d_model), trainable=True,
+                                      dtype=tf.float32)
 
     def call(self, inputs):
         q, k, v, mask = inputs
@@ -53,8 +56,6 @@ class Attention(tf.keras.layers.Layer):
         # # out = tf.einsum('blnd,ndm->blm', out, self.kernel)
 
         return out, attention_weights
-
-
 
 
 class TransformerBlock(tf.keras.layers.Layer):
@@ -86,13 +87,10 @@ class TransformerBlock(tf.keras.layers.Layer):
         return out2
 
 
-
-
 if __name__ == '__main__':
-
     att = Attention(d_model=768, n_head=12)
-    input = tf.keras.layers.Input(shape=(512,768))
-    out = att([input, input, input,None])
+    input = tf.keras.layers.Input(shape=(512, 768))
+    out = att([input, input, input, None])
     model = tf.keras.models.Model(inputs=input, outputs=out)
     model.summary()
     print(model.layers)
