@@ -90,13 +90,13 @@ class Pretraining_sentence_order_loss_layer(tf.keras.layers.Layer):
         super(Pretraining_sentence_order_loss_layer, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        self.dens = tf.keras.layers.Dense(units=2,
-                                          kernel_initializer=utils.get_initializer(self.config.initializer_range))
+        self.dense = tf.keras.layers.Dense(units=2,
+                                           kernel_initializer=utils.get_initializer(self.config.initializer_range))
         super(Pretraining_sentence_order_loss_layer, self).build(input_shape)
 
     def call(self, inputs):
         (input_tensor, labels) = inputs
-        logits = self.dens(input_tensor)
+        logits = self.dense(input_tensor)
 
         log_probs = tf.nn.log_softmax(logits, axis=-1)
 

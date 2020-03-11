@@ -88,13 +88,13 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
         super(Pretraining_next_sentence_loss_layer, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        self.dens = tf.keras.layers.Dense(units=2,
-                                          kernel_initializer=utils.get_initializer(self.config.initializer_range))
+        self.dense = tf.keras.layers.Dense(units=2,
+                                           kernel_initializer=utils.get_initializer(self.config.initializer_range))
         super(Pretraining_next_sentence_loss_layer, self).build(input_shape)
 
     def call(self, inputs):
         (input_tensor, labels) = inputs
-        logits = self.dens(input_tensor)
+        logits = self.dense(input_tensor)
 
         log_probs = tf.nn.log_softmax(logits, axis=-1)
 
@@ -113,7 +113,7 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
         return config
 
 
-def getPretrainingModel(config,  max_seq_length, every_device_batch_size=1,max_predictions_per_seq=20):
+def getPretrainingModel(config, max_seq_length, every_device_batch_size=1, max_predictions_per_seq=20):
     config = config
     seq_length = max_seq_length
     max_predictions_per_seq = max_predictions_per_seq
