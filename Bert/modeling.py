@@ -12,6 +12,7 @@ import copy
 import json
 import six
 
+
 class BertConfig(object):
     def __init__(self,
                  vocab_size=30522,  # 字典大小
@@ -61,8 +62,6 @@ class BertConfig(object):
     def to_json_string(self):
         """Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
-
-
 
 
 class BertModel(tf.keras.layers.Layer):
@@ -252,7 +251,7 @@ class Atttention(tf.keras.layers.Layer):
 
         if attention_mask is not None:
             attention_mask = attention_mask[:, None, :, :]
-            attention_weights += tf.cast(attention_mask, attention_weights.dtype) * -1e9
+            attention_weights += tf.cast(1.0 - attention_mask, attention_weights.dtype) * -1e9
 
         attention_probs = tf.nn.softmax(attention_weights)
         attention_probs = self.drop(attention_probs)
@@ -342,6 +341,7 @@ class TransformerBlock(tf.keras.layers.Layer):
                        })
         return config
 
+
 class Transformer(tf.keras.layers.Layer):
     def __init__(self,
                  num_attention_heads=12,
@@ -402,6 +402,7 @@ class Transformer(tf.keras.layers.Layer):
                        })
         return config
 
+
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
 
@@ -448,5 +449,3 @@ if __name__ == '__main__':
     print(model.trainable_weights)
     for i in model.trainable_weights:
         print(i.name)
-
-
