@@ -143,15 +143,3 @@ if __name__ == '__main__':
     flags.mark_flag_as_required("new_checkpoint_output_path")
     app.run(main)
 
-
-
-
-
-    # config = modeling.AlbertConfig.from_json_file("/Users/lollipop/Downloads/albert_base/albert_config.json")
-    # model = models.getPretrainingModel(config=config,
-    #                                    max_predictions_per_seq=512,
-    #                                    max_seq_length=512)
-    #
-    # model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
-    # print(model.trainable_weights)
-
