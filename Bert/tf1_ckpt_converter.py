@@ -82,15 +82,16 @@ def re_map_tf1(name):
                          r"bert/pooler/dense/kernel", tensor_name)
     tensor_name = re.sub(r"bert/pooler_transform/bias:0",
                          r"bert/pooler/dense/bias", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/output_bias:0",
+    # 预测部分
+    tensor_name = re.sub(r"mask_label_loss/output_bias:0",
                          r"cls/predictions/output_bias", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/kernel:0",
+    tensor_name = re.sub(r"mask_label_loss/dense/kernel:0",
                          r"cls/predictions/transform/dense/kernel", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/dense/bias:0",
+    tensor_name = re.sub(r"mask_label_loss/dense/bias:0",
                          r"cls/predictions/transform/dense/bias", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/layer_norm/gamma:0",
+    tensor_name = re.sub(r"mask_label_loss/layer_norm/gamma:0",
                          r"cls/predictions/transform/LayerNorm/gamma", tensor_name)
-    tensor_name = re.sub(r"pretraining_mask_label_loss_layer/layer_norm/beta:0",
+    tensor_name = re.sub(r"mask_label_loss/layer_norm/beta:0",
                          r"cls/predictions/transform/LayerNorm/beta", tensor_name)
     tensor_name = re.sub(r"next_sentence_loss/dense_1/kernel:0",
                          r"cls/seq_relationship/output_weights", tensor_name)
@@ -117,7 +118,7 @@ def conver_model_tf1(model, tf1_ckpt_path, new_ckpt_save_path):
         if name == "next_sentence_loss/dense_1/kernel:0":
             map_tensor = map_tensor.T
         trainable_weight.assign(map_tensor)
-        print(f"{name}  >>>>  {map_name}   转换成功")
+        print(f"{map_name, map_tensor.shape}  >>>>  {name, trainable_weight.shape}   转换成功")
 
     model.save_weights(os.path.join(new_ckpt_save_path, "bert_model.ckpt"))
 
@@ -126,9 +127,14 @@ def main(_):
     assert tf.version.VERSION.startswith('2.')
     config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
-    model = models.getPretrainingModel(config=config,
-                                       max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-                                       max_seq_length=FLAGS.max_seq_length)
+    # 转换bert模型部分  不包括预测部分的权重
+    model = models.get_base_model(config=config,
+                                  max_seq_length=FLAGS.max_seq_length)
+
+    # 转换bert模型部分  包括预测部分的权重
+    # model= models.getPretrainingModel(config=config,
+    #                                   max_seq_length=FLAGS.max_seq_length,
+    #                                   max_predictions_per_seq=FLAGS.max_predictions_per_seq)
     conver_model_tf1(model, FLAGS.TF1_checkpoint_path, FLAGS.new_checkpoint_output_path)
     print("TF1模型转换完成")
 
