@@ -15,7 +15,7 @@ import modeling
 
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, every_device_batch_size, **kwargs):
-        super(Pretraining_mask_label_loss_layer, self).__init__()
+        super(Pretraining_mask_label_loss_layer, self).__init__(**kwargs)
         self.source_network = source_network
         self.batch_size = every_device_batch_size
         self.config = self.source_network.config
@@ -115,6 +115,23 @@ class Pretraining_sentence_order_loss_layer(tf.keras.layers.Layer):
         return config
 
 
+def get_base_model(config, max_seq_length=512):
+    config = config
+    seq_length = max_seq_length
+    input_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_ids', dtype=tf.int32)
+    input_mask = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_mask', dtype=tf.int32)
+    segment_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='segment_ids', dtype=tf.int32)
+    albert_model = modeling.AlbertModel(config, name="albert")
+    pooled_output, sequence_output = albert_model((input_ids, input_mask, segment_ids))
+    inputs = [input_ids, input_mask, segment_ids]
+    outputs = [pooled_output, sequence_output]
+
+    base_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
+    return base_model
+
 def getPretrainingModel(config, max_seq_length=512, every_device_batch_size=1, max_predictions_per_seq=20):
     config = config
     seq_length = max_seq_length
@@ -167,5 +184,19 @@ if __name__ == '__main__':
     config = modeling.AlbertConfig()
     pretraingModel = getPretrainingModel(config)
     pretraingModel.summary()
-    for i in pretraingModel.trainable_weights:
-        print(i.name, i.shape)
+    for i in pretraingModel.layers : print(i)
+    # pretraingModel.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
+
+    # pretraingModel.summary()
+    # for i in pretraingModel.trainable_weights:
+    #     print(i.name, i.shape)
+
+
+    # model = get_base_model(config)
+    # print(model.trainable_weights)
+    # print("@@@@@@@")
+    # print(model.outputs)
+    # for i in model.trainable_weights:
+    #     print(i.name, i.shape)
+    # model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
+    # print(model.outputs)
