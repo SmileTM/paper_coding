@@ -133,6 +133,7 @@ def load_data(file_path, BATCH_SIZE, max_seq_length, max_predictions_per_seq, sh
     if shuffle:  # 是否打乱数据
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     dataset = dataset.batch(batch_size=BATCH_SIZE, drop_remainder=True)
+    dataset = dataset.prefetch(10)
     return dataset
 
 
@@ -152,7 +153,6 @@ def main(_):
                         shuffle_buffer=FLAGS.data_shuffle_buffer)
     strategy = tf.distribute.MirroredStrategy()
     with strategy.scope():
-
         callbacks = get_callbasks(num_train_steps=FLAGS.num_train_steps, save_path=FLAGS.output_dir)
 
         config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
