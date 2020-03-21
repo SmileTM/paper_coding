@@ -111,9 +111,7 @@ def conver_model_tf1(model, tf1_ckpt_path, new_ckpt_save_path):
     ckpt_tf1 = tf.train.load_checkpoint(tf1_ckpt_path)
     for trainable_weight in model.trainable_weights:
         name = trainable_weight.name
-        # print('name',name)
         map_name = name_map_tf1(name)
-        # print('map_name',map_name)
         map_tensor = ckpt_tf1.get_tensor(map_name)
         if name == "next_sentence_loss/dense_1/kernel:0":
             map_tensor = map_tensor.T
