@@ -14,7 +14,7 @@ import modeling
 
 class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, every_device_batch_size, **kwargs):
-        super(Pretraining_mask_label_loss_layer, self).__init__()
+        super(Pretraining_mask_label_loss_layer, self).__init__(**kwargs)
         self.source_network = source_network
         self.batch_size = every_device_batch_size
         self.config = self.source_network.config
@@ -83,9 +83,9 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
 
 class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
     def __init__(self, source_network, **kwargs):
+        super(Pretraining_next_sentence_loss_layer, self).__init__(**kwargs)
         self.source_network = source_network
         self.config = self.source_network.config
-        super(Pretraining_next_sentence_loss_layer, self).__init__(**kwargs)
 
     def build(self, input_shape):
         self.dense = tf.keras.layers.Dense(units=2,
@@ -111,6 +111,26 @@ class Pretraining_next_sentence_loss_layer(tf.keras.layers.Layer):
             "source_network": self.source_network
         })
         return config
+
+
+def get_base_model(config, max_seq_length=512):
+    config = config
+    seq_length = max_seq_length
+    input_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_ids', dtype=tf.int32)
+    input_mask = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_mask', dtype=tf.int32)
+    segment_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='segment_ids', dtype=tf.int32)
+
+    bert_model = modeling.BertModel(config, name="bert")
+    pooled_output, sequence_output = bert_model((input_ids, input_mask, segment_ids))
+
+    inputs = [input_ids, input_mask, segment_ids]
+    outputs = [pooled_output, sequence_output]
+
+    base_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
+    return base_model
 
 
 def getPretrainingModel(config, max_seq_length, every_device_batch_size=1, max_predictions_per_seq=20):
