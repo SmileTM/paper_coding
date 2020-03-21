@@ -158,7 +158,8 @@ def main(_):
         config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
         pretraining_model = models.getPretrainingModel(config=config,
-                                                       every_device_batch_size=int(FLAGS.BATCH_SIZE // strategy.num_replicas_in_sync),
+                                                       every_device_batch_size=int(
+                                                           FLAGS.BATCH_SIZE // strategy.num_replicas_in_sync),
                                                        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
                                                        max_seq_length=FLAGS.max_seq_length)
         pretraining_model.summary()
