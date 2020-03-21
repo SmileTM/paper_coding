@@ -25,7 +25,7 @@ class AlbertConfig(object):
                  hidden_dropout_prob=0.0,  # attention外部的droprate
                  attention_probs_dropout_prob=0.0,  # attnetion中droprate
                  max_position_embeddings=512,  # 最大输入的长度
-                 type_vocab_size=16,  # vocab种类
+                 type_vocab_size=2,  # vocab种类
                  initializer_range=0.02):  # 初始化率
 
         self.vocab_size = vocab_size
