@@ -84,18 +84,20 @@ def re_map_tf1(name):
                          "bert/encoder/transformer/group_0/inner_group_0/LayerNorm_1/beta", tensor_name)
     tensor_name = re.sub("albert/pooler_transform/kernel:0", "bert/pooler/dense/kernel", tensor_name)
     tensor_name = re.sub("albert/pooler_transform/bias:0", "bert/pooler/dense/bias", tensor_name)
-    tensor_name = re.sub("pretraining_mask_label_loss_layer/output_bias:0", "cls/predictions/output_bias", tensor_name)
-    tensor_name = re.sub("pretraining_mask_label_loss_layer/transform/kernel:0",
+
+    # pretrain_model
+    tensor_name = re.sub("mask_label_loss/output_bias:0", "cls/predictions/output_bias", tensor_name)
+    tensor_name = re.sub("mask_label_loss/transform/kernel:0",
                          "cls/predictions/transform/dense/kernel", tensor_name)
-    tensor_name = re.sub("pretraining_mask_label_loss_layer/transform/bias:0", "cls/predictions/transform/dense/bias",
+    tensor_name = re.sub("mask_label_loss/transform/bias:0", "cls/predictions/transform/dense/bias",
                          tensor_name)
-    tensor_name = re.sub("pretraining_mask_label_loss_layer/layer_norm/gamma:0",
+    tensor_name = re.sub("mask_label_loss/layer_norm/gamma:0",
                          "cls/predictions/transform/LayerNorm/gamma", tensor_name)
-    tensor_name = re.sub("pretraining_mask_label_loss_layer/layer_norm/beta:0",
+    tensor_name = re.sub("mask_label_loss/layer_norm/beta:0",
                          "cls/predictions/transform/LayerNorm/beta", tensor_name)
-    tensor_name = re.sub("seq_relationship/dense/kernel:0",
+    tensor_name = re.sub("next_sentence_labels/dense/kernel:0",
                          "cls/seq_relationship/output_weights", tensor_name)
-    tensor_name = re.sub("seq_relationship/dense/bias:0",
+    tensor_name = re.sub("next_sentence_labels/dense/bias:0",
                          "cls/seq_relationship/output_bias", tensor_name)
     return tensor_name
 
@@ -114,21 +116,23 @@ def conver_model_tf1(model, tf1_ckpt_path, new_ckpt_save_path):
         map_name = name_map_tf1(name)
         # print('map_name',map_name)
         map_tensor = ckpt_tf1.get_tensor(map_name)
-        if name == "seq_relationship/dense/kernel:0":
+        if name == "next_sentence_labels/dense/kernel:0":
             map_tensor = map_tensor.T
         trainable_weight.assign(map_tensor)
-        print(f"{name}  >>>>  {map_name}   转换成功")
+        print(f"{map_name,map_tensor.shape}  >>>>  {name,trainable_weight.shape}   转换成功")
 
-    model.save_weights(os.path.join(new_ckpt_save_path, "bert_model.ckpt"))
+    model.save_weights(os.path.join(new_ckpt_save_path, "albert_model.ckpt"))
 
 
 def main(_):
     assert tf.version.VERSION.startswith('2.')
     config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
-
-    model = models.getPretrainingModel(config=config,
-                                       max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-                                       max_seq_length=FLAGS.max_seq_length)
+    # 只载入bert模型部分的权重 不载入 预测部分
+    model = models.get_base_model(config,max_seq_length=FLAGS.max_seq_length)
+    #载入官方预训练 权重（包括预测部分)
+    # model = models.getPretrainingModel(config=config,
+    #                                    max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+    #                                    max_seq_length=FLAGS.max_seq_length)
     conver_model_tf1(model, FLAGS.TF1_checkpoint_path, FLAGS.new_checkpoint_output_path)
     print("TF1模型转换完成")
 
@@ -138,3 +142,16 @@ if __name__ == '__main__':
     flags.mark_flag_as_required("TF1_checkpoint_path")
     flags.mark_flag_as_required("new_checkpoint_output_path")
     app.run(main)
+
+
+
+
+
+    # config = modeling.AlbertConfig.from_json_file("/Users/lollipop/Downloads/albert_base/albert_config.json")
+    # model = models.getPretrainingModel(config=config,
+    #                                    max_predictions_per_seq=512,
+    #                                    max_seq_length=512)
+    #
+    # model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
+    # print(model.trainable_weights)
+
