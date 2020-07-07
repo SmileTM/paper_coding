@@ -133,7 +133,8 @@ def load_data(file_path, BATCH_SIZE, max_seq_length, max_predictions_per_seq, sh
     if shuffle:  # 是否打乱数据
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     dataset = dataset.batch(batch_size=BATCH_SIZE, drop_remainder=True)
-    dataset = dataset.prefetch(10)
+    dataset = dataset.cache()
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     return dataset
 
 
