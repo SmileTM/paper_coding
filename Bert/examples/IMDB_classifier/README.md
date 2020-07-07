@@ -7,3 +7,12 @@ IMDB影评数据集中的训练集和测试集分别位于 train 和 test 两个
 
 [数据集](https://ai.stanford.edu/~amaas/data/sentiment/)
 
+
+```python
+Epoch 1/3
+1562/1562 [==============================] - 4014s 3s/step - loss: 0.2769 - acc: 0.8814 - val_loss: 0.1815 - val_acc: 0.9299
+Epoch 2/3
+1562/1562 [==============================] - 4006s 3s/step - loss: 0.1166 - acc: 0.9584 - val_loss: 0.1704 - val_acc: 0.9386
+Epoch 3/3
+1562/1562 [==============================] - 4005s 3s/step - loss: 0.0318 - acc: 0.9914 - val_loss: 0.2132 - val_acc: 0.9412
+```
