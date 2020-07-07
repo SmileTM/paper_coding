@@ -11,6 +11,9 @@ IMDB影评数据集中的训练集和测试集分别位于 train 和 test 两个
 
 ## 使用
 
+### Require
+tensorflow>=2.2
+
 ### First
 bert 原生**TF1**预训练模型下载 https://github.com/google-research/bert
 下载后 通过 `tf1_ckpt_converter.py` 将TF1模型权重 进行转换 .
@@ -47,3 +50,4 @@ Epoch 2/3
 Epoch 3/3
 1562/1562 [==============================] - 4005s 3s/step - loss: 0.0318 - acc: 0.9914 - val_loss: 0.2132 - val_acc: 0.9412
 ```
+
