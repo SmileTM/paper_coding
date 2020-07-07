@@ -13,20 +13,28 @@ IMDB影评数据集中的训练集和测试集分别位于 train 和 test 两个
 
 ### First
 bert 原生**TF1**预训练模型下载 https://github.com/google-research/bert
-下载后 通过'tf1_ckpt_converter.py' 将TF1模型权重 进行转换 .
+下载后 通过 `tf1_ckpt_converter.py` 将TF1模型权重 进行转换 .
 
 ### Second
-对IMDB数据进行处理，生成 'train.pos', 'train.neg', 'test.pos', 'test.neg' 4个文件
+对IMDB数据进行处理，生成 `train.pos`, `train.neg`, `test.pos`, `test.neg` 4个文件
+
 ```python
 python data_process.py
 ```
 
 ### Third
 在引入模型,并在数据集上进行微调.
+
 ```python
 python train.py
 ```
 
+## 补充
+也可以直接通过Google官方的tensorflow—hub 直接进行bert调用
+
+```python
+python train_hub.py
+```
 
 ## 结果
 
