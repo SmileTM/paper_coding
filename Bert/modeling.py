@@ -331,7 +331,7 @@ class TransformerBlock(tf.keras.layers.Layer):
 
     def get_config(self):
         config = super(TransformerBlock, self).get_config()
-        config.updata({"num_attention_heads": self.num_attention_heads,
+        config.update({"num_attention_heads": self.num_attention_heads,
                        "hidden_size": self.hidden_size,
                        "intermediate_size": self.initializer_range,
                        "hidden_act": self.hidden_act,
