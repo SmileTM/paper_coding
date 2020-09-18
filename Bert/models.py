@@ -45,13 +45,14 @@ class Pretraining_mask_label_loss_layer(tf.keras.layers.Layer):
         logits = tf.matmul(input_tensor, self.embedding_table, transpose_b=True)
         logits = tf.nn.bias_add(logits, self.output_bias)
 
-        log_probs = tf.nn.log_softmax(logits, axis=-1)
+        # log_probs = tf.nn.log_softmax(logits, axis=-1)
         label_ids = tf.reshape(label_ids, [-1])
         label_weights = tf.reshape(label_weights, [-1])
 
-        one_hot_labels = tf.one_hot(label_ids, depth=self.config.vocab_size, dtype=tf.float32)
+        # one_hot_labels = tf.one_hot(label_ids, depth=self.config.vocab_size, dtype=tf.float32)
 
-        per_example_loss = -tf.reduce_sum(log_probs * one_hot_labels, axis=-1)
+        # per_example_loss = -tf.reduce_sum(log_probs * one_hot_labels, axis=-1)
+        per_example_loss = tf.losses.sparse_categorical_crossentropy(label_ids, logits, from_logits=True)
         numerator = tf.reduce_sum(label_weights * per_example_loss)
         denominator = tf.reduce_sum(label_weights) + 1e-5
         loss = numerator / denominator

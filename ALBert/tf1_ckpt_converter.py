@@ -18,7 +18,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("albert_config_file", "/Users/lollipop/Downloads/albert_base/albert_config.json",
                     "Bert configuration file to define core bert layers.")
 
-flags.DEFINE_string("new_checkpoint_output_path", "out_new",
+flags.DEFINE_string("new_checkpoint_output_path", "bert-model",
                     "Name for the created object-based tf2 checkpoint.")
 
 flags.DEFINE_string(
@@ -127,12 +127,12 @@ def conver_model_tf1(model, tf1_ckpt_path, new_ckpt_save_path):
 def main(_):
     assert tf.version.VERSION.startswith('2.')
     config = modeling.AlbertConfig.from_json_file(FLAGS.albert_config_file)
-    # 只载入bert模型部分的权重 不载入 预测部分
-    model = models.get_base_model(config,max_seq_length=FLAGS.max_seq_length)
-    #载入官方预训练 权重（包括预测部分)
-    # model = models.getPretrainingModel(config=config,
-    #                                    max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-    #                                    max_seq_length=FLAGS.max_seq_length)
+    # 只载入bert模型部分的权重 不载入 CLS 预测部分
+    # model = models.get_base_model(config,max_seq_length=FLAGS.max_seq_length)
+    # 载入官方预训练 权重（包括预测部分)
+    model = models.getPretrainingModel(config=config,
+                                       max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+                                       max_seq_length=FLAGS.max_seq_length)
     conver_model_tf1(model, FLAGS.TF1_checkpoint_path, FLAGS.new_checkpoint_output_path)
     print("TF1模型转换完成")
 

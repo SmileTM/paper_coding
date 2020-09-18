@@ -16,5 +16,6 @@ train set accuracy: 99.916%   eval set accuracy: 93.424%
 通过蒸馏，student model 在IMDB 上的成绩：
 
 ```python
-train loss: 0.10388103872537613, train acc: 0.9917600154876709, test acc: 0.839680016040802
+train set accuracy: 99.176%   eval set accuracy: 83.968%
+
 ```

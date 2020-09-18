@@ -446,7 +446,7 @@ if __name__ == '__main__':
     print(model.trainable_weights)
     for i in model.trainable_weights:
         print(i.name, i.shape)
-    model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/bert_model.ckpt")
+    model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/bert-model/bert_model.ckpt")
     print(model.trainable_weights)
 
     print("out")
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     types = tf.constant(tf.zeros((8, 512)), tf.float32)
     mask = tf.constant(tf.ones((8, 512)), dtype=tf.float32)
     print(model((types, wids, mask)))
-    # model.load_weights('/Users/lollipop/Documents/paper_coding/Bert/out_new/bert_model.ckpt')
+    # model.load_weights('/Users/lollipop/Documents/paper_coding/Bert/bert-model/bert_model.ckpt')
     # # print(model.trainable_weights)
     # # model.trainable_weights[-1].numpy = tf.random.uniform(shape=(768,), dtype=tf.float32)
     # # model.layers[-1].trainable_weights[-1].assign(tf.ones(shape=(768,), dtype=tf.float32))

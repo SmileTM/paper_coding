@@ -180,12 +180,56 @@ def getPretrainingModel(config, max_seq_length=512, every_device_batch_size=1, m
     return pretraining_model
 
 
+def getPretrainingMaskModel(config, max_seq_length=512, every_device_batch_size=1, max_predictions_per_seq=20):
+    config = config
+    seq_length = max_seq_length
+    max_predictions_per_seq = max_predictions_per_seq
+    input_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_ids', dtype=tf.int32)
+    input_mask = tf.keras.layers.Input(
+        shape=(seq_length,), name='input_mask', dtype=tf.int32)
+    segment_ids = tf.keras.layers.Input(
+        shape=(seq_length,), name='segment_ids', dtype=tf.int32)
+    masked_lm_positions = tf.keras.layers.Input(
+        shape=(max_predictions_per_seq,),
+        name='masked_lm_positions',
+        dtype=tf.int32)
+    masked_lm_ids = tf.keras.layers.Input(
+        shape=(max_predictions_per_seq,), name='masked_lm_ids', dtype=tf.int32)
+    masked_lm_weights = tf.keras.layers.Input(
+        shape=(max_predictions_per_seq,),
+        name='masked_lm_weights',
+        dtype=tf.int32)
+    seq_relationship = tf.keras.layers.Input(
+        shape=(1,), name='seq_relationship', dtype=tf.int32)
+
+    albert_model = modeling.AlbertModel(config, name="albert")
+    pooled_output, sequence_output = albert_model((input_ids, input_mask, segment_ids))
+
+    mask_label_loss = Pretraining_mask_label_loss_layer(source_network=albert_model,
+                                                        every_device_batch_size=every_device_batch_size,
+                                                        name='mask_label_loss')((sequence_output,
+                                                                                 masked_lm_positions,
+                                                                                 masked_lm_ids,
+                                                                                 masked_lm_weights))
+
+    inputs = [input_ids, input_mask, segment_ids, masked_lm_positions,
+              masked_lm_ids, masked_lm_weights, seq_relationship]
+
+    # 将经过reduce_sum得到的无维度数值，添加一个维度，避免传入loss keras计算出错
+    outputs = tf.expand_dims(mask_label_loss, axis=0)
+
+    pretraining_model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
+
+    return pretraining_model
+
+
 if __name__ == '__main__':
     config = modeling.AlbertConfig()
     pretraingModel = getPretrainingModel(config)
     pretraingModel.summary()
-    for i in pretraingModel.layers : print(i)
-    # pretraingModel.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
+    for i in pretraingModel.layers: print(i)
+    # pretraingModel.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/bert-model/albert_model.ckpt")
 
     # pretraingModel.summary()
     # for i in pretraingModel.trainable_weights:
@@ -198,5 +242,5 @@ if __name__ == '__main__':
     # print(model.outputs)
     # for i in model.trainable_weights:
     #     print(i.name, i.shape)
-    # model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/out_new/albert_model.ckpt")
+    # model.load_weights("/Users/lollipop/Documents/paper_coding/ALBert/bert-model/albert_model.ckpt")
     # print(model.outputs)

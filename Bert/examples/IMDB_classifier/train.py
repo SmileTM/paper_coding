@@ -43,14 +43,14 @@ with strategy.scope():
     pooled_output, _ = bert_model((input_ids, input_mask, segment_ids))
     out = tf.keras.layers.Dropout(0.1)(pooled_output)
 
-    out = tf.keras.layers.Dense(config.hidden_size)(pooled_output)
+    out = tf.keras.layers.Dense(config.hidden_size)(out)
     logits = tf.keras.layers.Dense(2)(out)
 
     inputs = [input_ids, input_mask, segment_ids]
 
     model = tf.keras.Model(inputs=inputs, outputs=logits)
 
-    model.load_weights('./out_new/bert_model.ckpt')
+    model.load_weights('./bert-model/bert_model.ckpt')
 
     optimizer = optimization.create_optimizer(initial_lr,
                                               all_steps,
