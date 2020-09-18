@@ -17,7 +17,7 @@ http://arxiv.org/abs/1810.04805
 * Google原生bert: https://github.com/google-research/bert
 * 哈工大版Chinese-BERT-wwm: https://github.com/ymcui/Chinese-BERT-wwm
 
-总的来说，只要你是基于[Google原生bert](https://github.com/google-research/bert)，未对代码中Bert架构内部进行修改的，均可转换。
+总的来说，只要你是基于[Google原生bert](https://github.com/google-research/bert) ，未对代码中Bert架构内部进行修改的，均可转换。
 
 ### 例子
 整体使用，就像使用正常的内部layer一样。
@@ -45,3 +45,6 @@ http://arxiv.org/abs/1810.04805
 ```
 
 
+
+### Examples
+包括 IMDB影评分类，知识蒸馏。
