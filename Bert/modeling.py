@@ -164,9 +164,11 @@ class EmbeddingProcessor(tf.keras.layers.Layer):
 
     def call(self, inputs):
         input_ids, segment_ids = inputs
+        seq_length = input_ids.shape[1]
         token_word_embeddings = self.embedding_word_ids(input_ids)  # [batch_size, seq_length, hidden_size]
         token_type_embeddings = self.embedding_type_ids(segment_ids)  # [batch_size, seq_length, hidden_size]
-        token_pos_embeddings = tf.expand_dims(self.embedding_pos, axis=0)  # [1, seq_length, hidden_size]
+        token_pos_embeddings = tf.expand_dims(self.embedding_pos[:seq_length, :],
+                                              axis=0)  # [1, seq_length, hidden_size]
 
         output = token_word_embeddings + token_type_embeddings + token_pos_embeddings
         output = self.output_layer_norm(output)
