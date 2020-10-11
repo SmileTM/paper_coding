@@ -423,9 +423,7 @@ def create_attention_mask_from_input_mask(mask):
     :param mask: shepe = [batch_size, seq_length]
     :return: attentino_mask = shape = [batch_size, seq_length, seq_length]
     '''
-    from_mask = mask[:, :, None]
-    to_mask = mask[:, None, :]
-    attention_mask = from_mask * to_mask
+    attention_mask = tf.einsum('BF,BT->BFT', mask, mask)
     return tf.cast(attention_mask, tf.float32)
 
 
