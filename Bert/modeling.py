@@ -381,8 +381,8 @@ class Transformer(tf.keras.layers.Layer):
         super(Transformer, self).build(input_shape)
 
     def call(self, inputs, return_all_layers=False):
-        input_tensro, attention_mask = inputs
-        output_tensor = input_tensro
+        input_tensor, attention_mask = inputs
+        output_tensor = input_tensor
         all_layer_outputs = []
         for layer in self.layers:
             output_tensor = layer((output_tensor, attention_mask))
