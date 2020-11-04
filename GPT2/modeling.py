@@ -154,6 +154,7 @@ class GPT2Model(tf.keras.layers.Layer):
         self.wpe = tf.keras.layers.Embedding(self.config.n_positions, self.config.n_embed, name='wpe',
                                              embeddings_initializer=tf.random_normal_initializer(
                                                  stddev=0.01))  # pos embed
+        # include token_id and type_id
         self.wte = tf.keras.layers.Embedding(self.config.n_vocab, self.config.n_embed, name='wte',
                                              embeddings_initializer=tf.random_normal_initializer(
                                                  stddev=0.02))  # token embed +
@@ -167,7 +168,7 @@ class GPT2Model(tf.keras.layers.Layer):
 
         token_ids_embeds = self.wte(token_ids)
         token_types_embeds = self.wte(token_types)
-        token_pos_embeds = self.wte(token_pos)
+        token_pos_embeds = self.wpe(token_pos)
         # todo: add past
         nf = token_ids.shape[1]
         nt = token_ids.shape[1]
@@ -197,7 +198,9 @@ def get_activation(name_str):
 
 if __name__ == '__main__':
     config = GPT2Config()
-    model = GPT2Model(config)
+    model = GPT2Model(config, name='model')
     token_ids = tf.ones((2, 10))
     token_types = tf.ones((2, 10))
     print(model((token_ids, token_types)))
+    for i in model.trainable_variables:
+        print(i.name)
