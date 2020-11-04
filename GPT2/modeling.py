@@ -10,21 +10,58 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 
-class Attention(tf.keras.layers.Layer):
-    def __init__(self, n_head, hidden_size, **kwargs):
+# "n_vocab": 50257,
+# "n_ctx": 1024,
+# "n_embd": 768,
+# "n_head": 12,
+# "n_layer": 12
+class GPT2Config(object):
+    def __init__(
+            self,
+            n_vocab=50257,
+            n_positions=1024,
+            n_ctx=1024,
+            n_embd=768,
+            n_head=12,
+            n_layer=12,
+            hidden_act='gelu',
+            attn_pdrop=0.1,
+            resid_pdrop=0.1,
+            initializer_range=0.02,
+            layer_norm_epsilon=1e-5
+    ):
+        self.n_vocab = n_vocab
+        self.n_positions = n_positions
+        self.n_ctx = n_ctx
+        self.n_embed = n_embd
         self.n_head = n_head
-        self.hidden_size = hidden_size
+        self.n_layer = n_layer
+        self.hidden_act = hidden_act
+        self.attn_pdrop = attn_pdrop
+        self.resid_pdrop = resid_pdrop
+        self.initializer_range = initializer_range
+        self.layer_norm_epsilon = layer_norm_epsilon
+
+
+class Attention(tf.keras.layers.Layer):
+    def __init__(self, config: GPT2Config, **kwargs):
+        super(Attention, self).__init__(**kwargs)
+        self.config = config
+        self.n_head = config.n_head
+        self.hidden_size = config.n_embed
 
     def build(self, input_shape):
         '''conv1d is just dense layer
         https://github.com/openai/gpt-2/issues/165
         '''
-        # Todo: add init
-        self.c_attn = tf.keras.layers.Dense(3 * self.hidden_size, name='c_attn')
-        self.c_proj = tf.keras.layers.Dense(self.hidden_size, name='c_proj')
-        # Todo: config.drop_rate
-        self.attn_drop_out = tf.keras.layers.Dropout(0.01)
-        self.drop_out = tf.keras.layers.Dropout(0.01)
+        self.c_attn = tf.keras.layers.Dense(3 * self.hidden_size, name='c_attn',
+                                            kernel_initializer=tf.initializers.TruncatedNormal(
+                                                stddev=self.config.initializer_range))
+        self.c_proj = tf.keras.layers.Dense(self.hidden_size, name='c_proj',
+                                            kernel_initializer=tf.initializers.TruncatedNormal(
+                                                stddev=self.config.initializer_range))
+        self.attn_drop_out = tf.keras.layers.Dropout(self.config.attn_pdrop)
+        self.drop_out = tf.keras.layers.Dropout(self.config.resid_pdrop)
 
     def attention_procedure(self, q, k, v, attention_mask):
         qk = tf.einsum("BFNH,BTNH->BNFT", q, k)
@@ -42,7 +79,7 @@ class Attention(tf.keras.layers.Layer):
 
     def call(self, inputs):
         x, attention_mask = inputs
-        x = self.c_attn(inputs)  # [B,L,H*3]
+        x = self.c_attn(x)  # [B,L,H*3]
         *start, _ = x.shape
         q, k, v = tf.split(x, 3, axis=-1)  # [B,L,H]
         new_shape = start + [self.n_head, -1]
@@ -57,19 +94,22 @@ class Attention(tf.keras.layers.Layer):
 
 
 class MLP(tf.keras.layers.Layer):
-    def __init__(self, hidden_size, inner_hidden_size, **kwargs):
+    def __init__(self, config: GPT2Config, hidden_size, inner_hidden_size, **kwargs):
         super(MLP, self).__init__(**kwargs)
+        self.config = config
         self.hidden_size = hidden_size
         self.inner_hidden_size = inner_hidden_size
 
     def build(self, input_shape):
-        # Todo: add init
-        self.c_fc = tf.keras.layers.Dense(self.inner_hidden_size, name='c_fc')
-        self.c_proj = tf.keras.layers.Dense(self.hidden_size, name='c_proj')
+        self.c_fc = tf.keras.layers.Dense(self.inner_hidden_size, name='c_fc',
+                                          kernel_initializer=tf.initializers.TruncatedNormal(
+                                              stddev=self.config.initializer_range))
+        self.c_proj = tf.keras.layers.Dense(self.hidden_size, name='c_proj',
+                                            kernel_initializer=tf.initializers.TruncatedNormal(
+                                                stddev=self.config.initializer_range))
         # Todo: replace `tfa.activations.gelu` to `tf.activations.gelu` in tf2.4+
-        self.glue = tfa.activations.gelu()
-        # Todo: add config_drop_out_rate
-        self.mlp_drop_out = tf.keras.layers.Dropout()
+        self.gelu = get_activation(self.config.hidden_act)
+        self.mlp_drop_out = tf.keras.layers.Dropout(self.config.resid_pdrop)
 
     def call(self, inputs):
         h1 = self.gelu(self.c_fc(inputs))
@@ -78,20 +118,22 @@ class MLP(tf.keras.layers.Layer):
 
 
 class TransformerBlock(tf.keras.layers.Layer):
-    def __init__(self, n_head, hidden_size, **kwargs):
+    def __init__(self, config: GPT2Config, **kwargs):
         super(TransformerBlock, self).__init__(**kwargs)
-        self.hidden_size = hidden_size
-        self.n_head = n_head
+        self.config = config
+        self.hidden_size = self.config.n_embed
+        self.n_head = self.config.n_head
 
     def build(self, input_shape):
         '''conv1d is just dense layer
         https://github.com/openai/gpt-2/issues/165
         '''
-        # Todo: add config epsilon
-        self.ln_1 = tf.keras.layers.LayerNormalization(name='ln_1')
-        self.ln_2 = tf.keras.layers.LayerNormalization(name='ln_2')
-        self.attenton = Attention(n_head=self.n_head, hidden_size=self.hidden_size, name='attn')
-        self.mlp = MLP(hidden_size=self.hidden_size, inner_hidden_size=self.hidden_size * 4, name='mlp')
+
+        self.ln_1 = tf.keras.layers.LayerNormalization(name='ln_1', epsilon=self.config.layer_norm_epsilon)
+        self.ln_2 = tf.keras.layers.LayerNormalization(name='ln_2', epsilon=self.config.layer_norm_epsilon)
+        self.attenton = Attention(config=self.config, name='attn')
+        self.mlp = MLP(config=self.config, hidden_size=self.hidden_size, inner_hidden_size=self.hidden_size * 4,
+                       name='mlp')
 
     def call(self, inputs):
         x, attention_mask = inputs
@@ -103,18 +145,22 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 
 class GPT2Model(tf.keras.layers.Layer):
-    def __init__(self, config, **kwargs):
+    def __init__(self, config: GPT2Config, **kwargs):
         super(GPT2Model, self).__init__(**kwargs)
         self.config = config
+        self.n_positions = config.n_positions
 
     def build(self, input_shape):
-        # Todo: replace to config
-        self.wpe = tf.keras.layers.Embedding(1024, 768, name='wpe')
-        self.wte = tf.keras.layers.Embedding(50257, 768, name='wte')
-        self.block_list = [TransformerBlock(n_head, hidden_size, name='h' + str(i)) for i in range(self.config.n_block)]
+        self.wpe = tf.keras.layers.Embedding(self.config.n_positions, self.config.n_embed, name='wpe',
+                                             embeddings_initializer=tf.random_normal_initializer(
+                                                 stddev=0.01))  # pos embed
+        self.wte = tf.keras.layers.Embedding(self.config.n_vocab, self.config.n_embed, name='wte',
+                                             embeddings_initializer=tf.random_normal_initializer(
+                                                 stddev=0.02))  # token embed +
+        self.block_list = [TransformerBlock(self.config, name='h' + str(i)) for i in range(self.config.n_layer)]
 
     def call(self, inputs, **kwargs):
-        token_ids, token_types, token_mask = inputs
+        token_ids, token_types = inputs
         batch_size, token_ids_length = token_ids.shape
 
         token_pos = tf.tile(tf.range(token_ids_length)[None, :], [batch_size, 1])
@@ -122,9 +168,36 @@ class GPT2Model(tf.keras.layers.Layer):
         token_ids_embeds = self.wte(token_ids)
         token_types_embeds = self.wte(token_types)
         token_pos_embeds = self.wte(token_pos)
-
+        # todo: add past
+        nf = token_ids.shape[1]
+        nt = token_ids.shape[1]
+        attention_mask = get_attention_mask(nf, nt, token_ids_embeds.dtype)
+        attention_mask = tf.reshape(attention_mask, [1, 1, nf, nt])
         hidden_states = token_ids_embeds + token_types_embeds + token_pos_embeds
         for tfblock in self.block_list:
             hidden_states = tfblock((hidden_states, attention_mask))
 
-    return hidden_states
+        return hidden_states
+
+
+def get_attention_mask(nf, nt, dtype):
+    i = tf.range(nf)[:, None]
+    j = tf.range(nt)
+    m = i >= j
+    return tf.cast(m, dtype)
+
+
+def get_activation(name_str):
+    # Todo: change tfa to tf until tf2.4
+    actionsDict = {'gelu': tfa.activations.gelu,
+                   'relu': tf.keras.activations.relu,
+                   'tanh': tf.keras.activations.tanh}
+    return actionsDict[name_str]
+
+
+if __name__ == '__main__':
+    config = GPT2Config()
+    model = GPT2Model(config)
+    token_ids = tf.ones((2, 10))
+    token_types = tf.ones((2, 10))
+    print(model((token_ids, token_types)))
