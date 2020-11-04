@@ -25,6 +25,7 @@ class GPT2Config(object):
             n_head=12,
             n_layer=12,
             hidden_act='gelu',
+            embd_pdrop=0.1,
             attn_pdrop=0.1,
             resid_pdrop=0.1,
             initializer_range=0.02,
@@ -37,6 +38,7 @@ class GPT2Config(object):
         self.n_head = n_head
         self.n_layer = n_layer
         self.hidden_act = hidden_act
+        self.embd_pdrop = embd_pdrop
         self.attn_pdrop = attn_pdrop
         self.resid_pdrop = resid_pdrop
         self.initializer_range = initializer_range
@@ -157,9 +159,10 @@ class GPT2Model(tf.keras.layers.Layer):
         # include token_id and type_id
         self.wte = tf.keras.layers.Embedding(self.config.n_vocab, self.config.n_embed, name='wte',
                                              embeddings_initializer=tf.random_normal_initializer(
-                                                 stddev=0.02))  # token embed +
+                                                 stddev=0.02))
+        self.embd_dropout = tf.keras.layers.Dropout(self.config.embd_pdrop)
         self.block_list = [TransformerBlock(self.config, name='h' + str(i)) for i in range(self.config.n_layer)]
-
+        self.ln = tf.keras.layers.LayerNormalization(name='ln_f', epsilon=self.config.layer_norm_epsilon)
     def call(self, inputs, **kwargs):
         token_ids, token_types = inputs
         batch_size, token_ids_length = token_ids.shape
@@ -175,10 +178,14 @@ class GPT2Model(tf.keras.layers.Layer):
         attention_mask = get_attention_mask(nf, nt, token_ids_embeds.dtype)
         attention_mask = tf.reshape(attention_mask, [1, 1, nf, nt])
         hidden_states = token_ids_embeds + token_types_embeds + token_pos_embeds
+        hidden_states = self.embd_dropout(hidden_states)
         for tfblock in self.block_list:
             hidden_states = tfblock((hidden_states, attention_mask))
 
-        return hidden_states
+        hidden_states = self.ln(hidden_states)
+        logits = tf.matmul(hidden_states, self.wte.embeddings, transpose_b=True)
+
+        return logits
 
 
 def get_attention_mask(nf, nt, dtype):
@@ -203,4 +210,4 @@ if __name__ == '__main__':
     token_types = tf.ones((2, 10))
     print(model((token_ids, token_types)))
     for i in model.trainable_variables:
-        print(i.name)
+        print(i.name, i.numpy().shape)
