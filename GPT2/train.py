@@ -39,10 +39,10 @@ with strategy.scope():
     # 模型 优化器 定义
     config = modeling.GPT2Config()
     model = modeling.GPT2Model(config)
-    # optimizer = optimization.create_optimizer(init_lr=5e-5,
-    #                                           total_step=total_step,
-    #                                           num_warmup_steps=int(total_step*0.1))
-    optimizer = tf.keras.optimizers.Adam()
+    optimizer = optimization.create_optimizer(init_lr=5e-5,
+                                              num_train_steps=total_step,
+                                              num_warmup_steps=int(total_step * 0.1))
+    # optimizer = tf.keras.optimizers.Adam()
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
     manager = tf.train.CheckpointManager(checkpoint,
                                          directory=ckpt_output_dir,
