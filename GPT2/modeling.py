@@ -197,6 +197,7 @@ def get_attention_mask(nf, nt, dtype):
 
 def get_activation(name_str):
     # Todo: change tfa to tf until tf2.4
+    # tf.keras.activations.relu
     actionsDict = {'gelu': tfa.activations.gelu,
                    'relu': tf.keras.activations.relu,
                    'tanh': tf.keras.activations.tanh}
