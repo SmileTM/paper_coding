@@ -24,6 +24,7 @@ class GPT2Config(object):
             n_embd=768,
             n_head=12,
             n_layer=12,
+            n_type=10,
             hidden_act='gelu',
             embd_pdrop=0.1,
             attn_pdrop=0.1,
@@ -37,6 +38,7 @@ class GPT2Config(object):
         self.n_embed = n_embd
         self.n_head = n_head
         self.n_layer = n_layer
+        self.n_type = n_type
         self.hidden_act = hidden_act
         self.embd_pdrop = embd_pdrop
         self.attn_pdrop = attn_pdrop
@@ -73,7 +75,6 @@ class Attention(tf.keras.layers.Layer):
         if attention_mask is not None:
             attention_weights = attention_weights + attention_mask
 
-        # Todo: add_lm_mask
         attention_probs = tf.nn.softmax(attention_weights, -1)
         attention_probs = self.attn_drop_out(attention_probs)
         attention_out = tf.einsum("BNFT,BTNH->BFNH", attention_probs, v)
@@ -153,16 +154,22 @@ class GPT2Model(tf.keras.layers.Layer):
         self.n_positions = config.n_positions
 
     def build(self, input_shape):
+        # position embedding
         self.wpe = tf.keras.layers.Embedding(self.config.n_positions, self.config.n_embed, name='wpe',
                                              embeddings_initializer=tf.random_normal_initializer(
                                                  stddev=0.01))  # pos embed
-        # include token_id and type_id
+        # token_id embedding
         self.wte = tf.keras.layers.Embedding(self.config.n_vocab, self.config.n_embed, name='wte',
+                                             embeddings_initializer=tf.random_normal_initializer(
+                                                 stddev=0.02))
+        # token_type_ids embedding
+        self.tte = tf.keras.layers.Embedding(self.config.n_type, self.config.n_embed, name='tte',
                                              embeddings_initializer=tf.random_normal_initializer(
                                                  stddev=0.02))
         self.embd_dropout = tf.keras.layers.Dropout(self.config.embd_pdrop)
         self.block_list = [TransformerBlock(self.config, name='h' + str(i)) for i in range(self.config.n_layer)]
         self.ln = tf.keras.layers.LayerNormalization(name='ln_f', epsilon=self.config.layer_norm_epsilon)
+
     def call(self, inputs, **kwargs):
         token_ids, token_types = inputs
         batch_size, token_ids_length = token_ids.shape
@@ -170,12 +177,12 @@ class GPT2Model(tf.keras.layers.Layer):
         token_pos = tf.tile(tf.range(token_ids_length)[None, :], [batch_size, 1])
 
         token_ids_embeds = self.wte(token_ids)
-        token_types_embeds = self.wte(token_types)
+        token_types_embeds = self.tte(token_types)
         token_pos_embeds = self.wpe(token_pos)
         # todo: add past
         nf = token_ids.shape[1]
         nt = token_ids.shape[1]
-        attention_mask = get_attention_mask(nf, nt, token_ids_embeds.dtype)
+        attention_mask = self.get_attention_mask(nf, nt, token_ids_embeds.dtype)
         attention_mask = tf.reshape(attention_mask, [1, 1, nf, nt])
         hidden_states = token_ids_embeds + token_types_embeds + token_pos_embeds
         hidden_states = self.embd_dropout(hidden_states)
@@ -187,12 +194,11 @@ class GPT2Model(tf.keras.layers.Layer):
 
         return logits
 
-
-def get_attention_mask(nf, nt, dtype):
-    i = tf.range(nf)[:, None]
-    j = tf.range(nt)
-    m = i >= j
-    return tf.cast(m, dtype)
+    def get_attention_mask(self, nf, nt, dtype):
+        i = tf.range(nf)[:, None]
+        j = tf.range(nt)
+        m = i >= j
+        return tf.cast(m, dtype)
 
 
 def get_activation(name_str):
