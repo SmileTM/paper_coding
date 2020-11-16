@@ -72,7 +72,7 @@ class Attention(tf.keras.layers.Layer):
         dk = tf.cast(k.shape[-1], dtype=qk.dtype)
         attention_weights = qk / tf.sqrt(dk)
         if attention_mask is not None:
-            attention_weights = attention_weights - (1 - attention_mask) * 1e-6
+            attention_weights = attention_weights - (1 - attention_mask) * 1e10
 
         attention_probs = tf.nn.softmax(attention_weights, -1)
         attention_probs = self.attn_drop_out(attention_probs)
