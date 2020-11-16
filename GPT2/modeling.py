@@ -70,10 +70,9 @@ class Attention(tf.keras.layers.Layer):
     def attention_procedure(self, q, k, v, attention_mask):
         qk = tf.einsum("BFNH,BTNH->BNFT", q, k)
         dk = tf.cast(k.shape[-1], dtype=qk.dtype)
-        qk = qk / tf.sqrt(dk)
-        attention_weights = qk + attention_mask
+        attention_weights = qk / tf.sqrt(dk)
         if attention_mask is not None:
-            attention_weights = attention_weights + attention_mask
+            attention_weights = attention_weights - (1 - attention_mask) * 1e-6
 
         attention_probs = tf.nn.softmax(attention_weights, -1)
         attention_probs = self.attn_drop_out(attention_probs)
